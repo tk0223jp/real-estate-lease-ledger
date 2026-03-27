@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}契約一覧 | 賃貸借契約管理台帳{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> 契約一覧</h4>
+  <a href="{{ url_for('contracts.new') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg"></i> 新規契約
+  </a>
+</div>
+
+{% if contracts %}
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>物件名</th>
+          <th>契約開始</th>
+          <th>契約終了</th>
+          <th>自動更新</th>
+          <th>支払日</th>
+          <th class="text-end">月額賃料（税抜）</th>
+          <th class="text-end">月額合計（税込）</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in contracts %}
+        {% set days = c.days_until_expiry %}
+        <tr class="{{ 'table-danger' if days is not none and days <= 30 else ('table-warning' if days is not none and days <= 90 else '') }}">
+          <td>
+            <a href="{{ url_for('properties.detail', id=c.property_id) }}">
+              {{ c.property.name }}
+            </a>
+          </td>
+          <td>{{ c.contract_start }}</td>
+          <td>
+            {{ c.contract_end or "無期限" }}
+            {% if days is not none and days <= 90 %}
+              <span class="badge {{ 'bg-danger' if days <= 30 else 'bg-warning text-dark' }}">
+                あと{{ days }}日
+              </span>
+            {% endif %}
+          </td>
+          <td>{{ "あり" if c.auto_renewal else "なし" }}</td>
+          <td>毎月{{ c.payment_day }}日</td>
+          <td class="text-end">{{ "{:,}".format(c.rent_amount) }} 円</td>
+          <td class="text-end fw-bold">{{ "{:,}".format(c.transfer_amount) }} 円</td>
+          <td class="text-end">
+            <a href="{{ url_for('contracts.detail', id=c.id) }}" class="btn btn-sm btn-outline-primary">詳細</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+  <i class="bi bi-file-earmark fs-1"></i>
+  <p class="mt-2">契約が登録されていません。</p>
+</div>
+{% endif %}
+{% endblock %}

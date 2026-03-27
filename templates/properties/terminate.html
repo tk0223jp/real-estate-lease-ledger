@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}解約処理 — {{ prop.name }} — 賃貸借管理台帳{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('properties.detail', id=prop.id) }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h2>解約処理</h2>
+  </div>
+</div>
+
+<div style="max-width:560px">
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-building me-1"></i>対象物件</div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0" style="font-size:0.85rem">
+        <tr>
+          <th style="width:120px;padding-left:1rem">物件名</th>
+          <td>{{ prop.name }}
+            {% if prop.property_no %}<span class="badge-no ms-1">{{ prop.property_no }}</span>{% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th style="padding-left:1rem">契約期間</th>
+          <td>{{ contract.contract_start }} 〜 {{ contract.contract_end or '無期限' }}</td>
+        </tr>
+        <tr>
+          <th style="padding-left:1rem">月額（税込）</th>
+          <td class="amount">¥{{ '{:,}'.format(contract.transfer_amount) }}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    解約処理を行うと、この契約はアクティブ契約から除外されます。支払スケジュールの新規生成対象からも外れます。
+  </div>
+
+  <form method="post">
+    <div class="form-section">
+      <div class="form-section-title"><i class="bi bi-calendar-x me-1"></i>解約情報</div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">解約日 <span style="color:var(--accent-red)">*</span></label>
+          <input type="date" name="terminated_at" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">退去日</label>
+          <input type="date" name="vacated_at" class="form-control">
+          <div class="form-text">空欄可</div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">解約理由</label>
+          <textarea name="termination_reason" class="form-control" rows="3" placeholder="例）移転のため、賃料値上げのため など"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mt-1">
+      <button type="submit" class="btn btn-outline-danger"
+              onclick="return confirm('「{{ prop.name }}」の解約処理を実行します。よろしいですか？')">
+        <i class="bi bi-x-circle me-1"></i>解約処理を実行
+      </button>
+      <a href="{{ url_for('properties.detail', id=prop.id) }}" class="btn btn-outline-secondary">キャンセル</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

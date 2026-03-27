@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}不動産賃貸借契約管理台帳{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-card: #21262d;
+      --bg-card-hover: #262c34;
+      --border-color: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-yellow: #d29922;
+      --accent-red: #f85149;
+      --accent-purple: #bc8cff;
+      --sidebar-width: 220px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      z-index: 1000;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      padding: 1rem 1.25rem 0.875rem;
+      border-bottom: 1px solid var(--border-color);
+      text-decoration: none;
+      display: block;
+    }
+
+    .sidebar-brand .brand-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.4;
+      display: block;
+    }
+
+    .sidebar-brand .brand-sub {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+    }
+
+    .company-switcher {
+      padding: 0.625rem 0.875rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .company-switcher label {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+
+    .company-switcher select {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      width: 100%;
+      padding: 0.3rem 0.5rem;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .company-switcher select:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    .sidebar-nav { padding: 0.5rem 0; flex: 1; }
+
+    .nav-section-label {
+      padding: 0.6rem 1.25rem 0.2rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+    }
+
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.45rem 1.25rem;
+      color: var(--text-secondary);
+      font-size: 0.83rem;
+      text-decoration: none;
+      transition: color 0.15s, background 0.15s;
+      border-left: 2px solid transparent;
+    }
+
+    .sidebar-nav a:hover {
+      color: var(--text-primary);
+      background-color: rgba(255,255,255,0.04);
+    }
+
+    .sidebar-nav a.active {
+      color: var(--accent-blue);
+      background-color: rgba(88,166,255,0.08);
+      border-left-color: var(--accent-blue);
+    }
+
+    .sidebar-nav a i { font-size: 0.9rem; width: 1rem; text-align: center; }
+
+    /* ─── Main content ─── */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .page-content { padding: 1.5rem; flex: 1; }
+
+    /* ─── Page header ─── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+
+    .page-header h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    /* ─── Cards ─── */
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+
+    .card-header {
+      background-color: transparent;
+      border-bottom: 1px solid var(--border-color);
+      font-weight: 600;
+      font-size: 0.875rem;
+      padding: 0.75rem 1rem;
+    }
+
+    .card-body { padding: 1rem; }
+
+    /* Stat cards */
+    .stat-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.1rem 1.25rem;
+    }
+
+    .stat-card .stat-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      margin-top: 0.3rem;
+    }
+
+    .stat-card .stat-icon { font-size: 1.4rem; opacity: 0.5; }
+
+    /* ─── Tables ─── */
+    .table { color: var(--text-primary); margin-bottom: 0; }
+
+    .table thead th {
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      border-top: none;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      padding: 0.6rem 0.75rem;
+      white-space: nowrap;
+    }
+
+    .table tbody td {
+      border-color: var(--border-color);
+      font-size: 0.85rem;
+      vertical-align: middle;
+      padding: 0.65rem 0.75rem;
+    }
+
+    .table tbody tr:hover { background-color: rgba(255,255,255,0.025); }
+
+    .table-responsive {
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    /* ─── Forms ─── */
+    .form-control, .form-select {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      border-radius: 6px;
+    }
+
+    .form-control:focus, .form-select:focus {
+      background-color: var(--bg-secondary);
+      border-color: var(--accent-blue);
+      color: var(--text-primary);
+      box-shadow: 0 0 0 3px rgba(88,166,255,0.12);
+    }
+
+    .form-control::placeholder { color: var(--text-secondary); opacity: 0.6; }
+
+    .form-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.3rem;
+    }
+
+    .form-text { color: var(--text-secondary); font-size: 0.75rem; }
+
+    .form-check-input {
+      background-color: var(--bg-secondary);
+      border-color: var(--border-color);
+    }
+
+    .form-check-input:checked {
+      background-color: var(--accent-blue);
+      border-color: var(--accent-blue);
+    }
+
+    .input-group-text {
+      background-color: var(--bg-card);
+      border-color: var(--border-color);
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    /* Fieldset sections */
+    .form-section {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem 1.25rem 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .form-section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-blue);
+      margin-bottom: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .form-section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-color);
+    }
+
+    /* ─── Buttons ─── */
+    .btn-primary {
+      background-color: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: #0d1117;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .btn-primary:hover {
+      background-color: #79b8ff;
+      border-color: #79b8ff;
+      color: #0d1117;
+    }
+
+    .btn-outline-secondary {
+      border-color: var(--border-color);
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    .btn-outline-secondary:hover {
+      background-color: rgba(255,255,255,0.05);
+      color: var(--text-primary);
+      border-color: var(--border-color);
+    }
+
+    .btn-outline-danger {
+      border-color: rgba(248,81,73,0.4);
+      color: var(--accent-red);
+      font-size: 0.875rem;
+    }
+
+    .btn-outline-danger:hover {
+      background-color: rgba(248,81,73,0.1);
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+    }
+
+    .btn-sm { font-size: 0.78rem; padding: 0.25rem 0.6rem; }
+
+    /* ─── Badges ─── */
+    .badge-no {
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      background-color: rgba(88,166,255,0.12);
+      color: var(--accent-blue);
+      border: 1px solid rgba(88,166,255,0.25);
+      padding: 0.2em 0.55em;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .badge-paid {
+      background-color: rgba(63,185,80,0.12);
+      color: var(--accent-green);
+      border: 1px solid rgba(63,185,80,0.25);
+      font-size: 0.72rem;
+      padding: 0.2em 0.55em;
+      border-radius: 4px;
+    }
+
+    .badge-unpaid {
+      background-color: rgba(248,81,73,0.12);
+      color: var(--accent-red);
+      border: 1px solid rgba(248,81,73,0.25);
+      font-size: 0.72rem;
+      padding: 0.2em 0.55em;
+      border-radius: 4px;
+    }
+
+    .badge-type {
+      background-color: rgba(188,140,255,0.12);
+      color: var(--accent-purple);
+      border: 1px solid rgba(188,140,255,0.25);
+      font-size: 0.72rem;
+      padding: 0.2em 0.55em;
+      border-radius: 4px;
+    }
+
+    .badge-warn {
+      background-color: rgba(210,153,34,0.12);
+      color: var(--accent-yellow);
+      border: 1px solid rgba(210,153,34,0.25);
+      font-size: 0.72rem;
+      padding: 0.2em 0.55em;
+      border-radius: 4px;
+    }
+
+    /* Expiry row highlights */
+    .row-expiry-30 td:first-child { border-left: 3px solid var(--accent-red); }
+    .row-expiry-90 td:first-child { border-left: 3px solid var(--accent-yellow); }
+
+    /* ─── Alerts ─── */
+    .alert {
+      font-size: 0.875rem;
+      border-radius: 7px;
+      border: none;
+      margin-bottom: 1rem;
+    }
+
+    .alert-success {
+      background-color: rgba(63,185,80,0.12);
+      color: var(--accent-green);
+      border-left: 3px solid var(--accent-green);
+    }
+
+    .alert-danger {
+      background-color: rgba(248,81,73,0.12);
+      color: var(--accent-red);
+      border-left: 3px solid var(--accent-red);
+    }
+
+    .alert-warning {
+      background-color: rgba(210,153,34,0.12);
+      color: var(--accent-yellow);
+      border-left: 3px solid var(--accent-yellow);
+    }
+
+    .alert-info {
+      background-color: rgba(88,166,255,0.1);
+      color: var(--accent-blue);
+      border-left: 3px solid var(--accent-blue);
+    }
+
+    /* ─── Misc ─── */
+    hr { border-color: var(--border-color); opacity: 1; }
+
+    .text-muted { color: var(--text-secondary) !important; }
+
+    a { color: var(--accent-blue); }
+    a:hover { color: #79b8ff; }
+
+    .amount { font-variant-numeric: tabular-nums; }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); transition: transform 0.25s; }
+      .sidebar.show { transform: translateX(0); }
+      .main-content { margin-left: 0; }
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <a href="{{ url_for('index') }}" class="sidebar-brand">
+      <span class="brand-title"><i class="bi bi-building-fill me-1"></i>賃貸借管理台帳</span>
+      <span class="brand-sub">Lease Management</span>
+    </a>
+
+    <!-- 会社切り替え -->
+    <div class="company-switcher">
+      <label>会社切り替え</label>
+      <form method="POST" action="{{ url_for('companies.switch') }}" id="companySwitcherForm">
+        <select name="company_id" onchange="document.getElementById('companySwitcherForm').submit()">
+          <option value="">── 全社 ──</option>
+          {% for c in all_companies %}
+          <option value="{{ c.id }}" {% if c.id == current_company_id %}selected{% endif %}>
+            [{{ c.code }}] {{ c.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="nav-section-label">メイン</div>
+      <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i><span>ダッシュボード</span>
+      </a>
+
+      <div class="nav-section-label mt-2">物件・契約</div>
+      <a href="{{ url_for('properties.index') }}" class="{% if request.blueprint == 'properties' and request.endpoint != 'properties.new' %}active{% endif %}">
+        <i class="bi bi-building"></i><span>物件・契約一覧</span>
+      </a>
+      <a href="{{ url_for('properties.new') }}" class="{% if request.endpoint == 'properties.new' %}active{% endif %}">
+        <i class="bi bi-plus-circle"></i><span>新規登録</span>
+      </a>
+
+      <div class="nav-section-label mt-2">支払管理</div>
+      <a href="{{ url_for('payments.index') }}" class="{% if request.blueprint == 'payments' %}active{% endif %}">
+        <i class="bi bi-calendar-check"></i><span>月次支払</span>
+      </a>
+
+      <div class="nav-section-label mt-2">マスタ</div>
+      <a href="{{ url_for('companies.index') }}" class="{% if request.blueprint == 'companies' %}active{% endif %}">
+        <i class="bi bi-diagram-3"></i><span>会社マスタ</span>
+      </a>
+      <a href="{{ url_for('journal_patterns.index') }}" class="{% if request.blueprint == 'journal_patterns' %}active{% endif %}">
+        <i class="bi bi-journal-bookmark"></i><span>仕訳パターン</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <div class="main-content">
+    <div class="page-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

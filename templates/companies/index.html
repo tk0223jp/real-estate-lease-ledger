@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}会社マスタ — 賃貸借管理台帳{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-diagram-3 me-2"></i>会社マスタ</h2>
+  <a href="{{ url_for('companies.new') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>会社登録
+  </a>
+</div>
+
+{% if companies %}
+<div class="table-responsive">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>会社コード</th>
+        <th>会社名</th>
+        <th>物件数</th>
+        <th>備考</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in companies %}
+      <tr>
+        <td><span class="badge-no">{{ c.code }}</span></td>
+        <td class="fw-semibold">{{ c.name }}</td>
+        <td>{{ c.properties | list | length }}</td>
+        <td class="text-muted">{{ c.notes or '—' }}</td>
+        <td class="text-end" style="white-space:nowrap">
+          <a href="{{ url_for('companies.edit', id=c.id) }}" class="btn btn-sm btn-outline-secondary me-1">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <form method="post" action="{{ url_for('companies.delete', id=c.id) }}" style="display:inline"
+                onsubmit="return confirm('会社「{{ c.name }}」を削除しますか？')">
+            <button type="submit" class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-diagram-3" style="font-size:2.5rem;color:var(--text-secondary)"></i>
+    <div class="mt-2 text-muted">会社が登録されていません</div>
+    <a href="{{ url_for('companies.new') }}" class="btn btn-primary btn-sm mt-3">
+      <i class="bi bi-plus-lg me-1"></i>最初の会社を登録
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<div class="mt-4 card" style="max-width:480px">
+  <div class="card-header"><i class="bi bi-info-circle me-1"></i>物件番号の採番ルール</div>
+  <div class="card-body" style="font-size:0.8rem;color:var(--text-secondary)">
+    <p class="mb-1">物件番号は <strong style="color:var(--accent-blue)">P</strong> + <strong style="color:var(--accent-blue)">会社コード(2桁)</strong> + <strong style="color:var(--accent-blue)">連番(7桁)</strong> の形式で自動採番されます。</p>
+    <p class="mb-0">例: 会社コード <code>01</code> の場合 → <span class="badge-no">P010000001</span></p>
+  </div>
+</div>
+{% endblock %}

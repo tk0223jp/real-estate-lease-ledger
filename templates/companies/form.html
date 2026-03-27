@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ "会社編集" if company else "会社登録" }} — 賃貸借管理台帳{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('companies.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h2>{{ "会社編集" if company else "会社登録" }}</h2>
+  </div>
+</div>
+
+<form method="post" style="max-width:480px">
+  <div class="card">
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label">会社コード（2桁の数字） <span style="color:var(--accent-red)">*</span></label>
+        <input type="text" name="code" class="form-control" maxlength="2" pattern="[0-9]{2}"
+               value="{{ form.get('code', company.code if company else '') }}"
+               {% if company %}readonly{% endif %}
+               placeholder="01" required>
+        {% if company %}
+        <div class="form-text">会社コードは変更できません</div>
+        {% else %}
+        <div class="form-text">物件番号の採番に使用します（例: 01 → P010000001）</div>
+        {% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">会社名 <span style="color:var(--accent-red)">*</span></label>
+        <input type="text" name="name" class="form-control"
+               value="{{ form.get('name', company.name if company else '') }}"
+               placeholder="例）株式会社サンプル" required>
+      </div>
+      <div class="mb-4">
+        <label class="form-label">備考</label>
+        <textarea name="notes" class="form-control" rows="2"
+                  placeholder="補足メモなど">{{ form.get('notes', company.notes if company and company.notes else '') }}</textarea>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>{{ "更新する" if company else "登録する" }}
+        </button>
+        <a href="{{ url_for('companies.index') }}" class="btn btn-outline-secondary">キャンセル</a>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

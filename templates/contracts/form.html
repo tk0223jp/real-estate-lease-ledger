@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}{{ "契約編集" if action == "edit" else "契約登録" }} | 賃貸借契約管理台帳{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3">
+  <a href="{{ url_for('contracts.index') }}" class="btn btn-outline-secondary btn-sm me-2">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="mb-0">{{ "契約編集" if action == "edit" else "契約登録" }}</h4>
+</div>
+
+<form method="post">
+  <div class="row g-3">
+
+    <!-- 基本情報 -->
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header fw-bold bg-light">基本情報</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">物件 <span class="text-danger">*</span></label>
+              <select name="property_id" class="form-select" required>
+                <option value="">選択してください</option>
+                {% for p in properties %}
+                <option value="{{ p.id }}" {{ "selected" if c.property_id == p.id }}>{{ p.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">契約開始日 <span class="text-danger">*</span></label>
+              <input type="date" name="contract_start" class="form-control"
+                     value="{{ c.contract_start or '' }}" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">契約終了日</label>
+              <input type="date" name="contract_end" class="form-control"
+                     value="{{ c.contract_end or '' }}">
+              <div class="form-text">空欄 = 無期限</div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">支払日</label>
+              <div class="input-group">
+                <span class="input-group-text">毎月</span>
+                <input type="number" name="payment_day" class="form-control"
+                       value="{{ c.payment_day or 25 }}" min="1" max="31">
+                <span class="input-group-text">日</span>
+              </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-center pt-4">
+              <div class="form-check">
+                <input type="checkbox" name="auto_renewal" class="form-check-input"
+                       id="auto_renewal" {{ "checked" if c.auto_renewal }}>
+                <label class="form-check-label" for="auto_renewal">自動更新あり</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 月額費用 -->
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header fw-bold bg-light">月額費用（税抜金額を入力）</div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-bordered mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width:30%">費目</th>
+                  <th>金額（税抜）</th>
+                  <th>消費税区分</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="fw-bold">賃料</td>
+                  <td>
+                    <div class="input-group">
+                      <input type="number" name="rent_amount" class="form-control text-end"
+                             value="{{ c.rent_amount or 0 }}" min="0">
+                      <span class="input-group-text">円</span>
+                    </div>
+                  </td>
+                  <td>
+                    <select name="rent_tax_type" class="form-select">
+                      {% for t in tax_types %}
+                      <option {{ "selected" if c.rent_tax_type == t }}>{{ t }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="fw-bold">管理費</td>
+                  <td>
+                    <div class="input-group">
+                      <input type="number" name="mgmt_fee_amount" class="form-control text-end"
+                             value="{{ c.mgmt_fee_amount or 0 }}" min="0">
+                      <span class="input-group-text">円</span>
+                    </div>
+                  </td>
+                  <td>
+                    <select name="mgmt_fee_tax_type" class="form-select">
+                      {% for t in tax_types %}
+                      <option {{ "selected" if c.mgmt_fee_tax_type == t }}>{{ t }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="fw-bold">駐車場代</td>
+                  <td>
+                    <div class="input-group">
+                      <input type="number" name="parking_amount" class="form-control text-end"
+                             value="{{ c.parking_amount or 0 }}" min="0">
+                      <span class="input-group-text">円</span>
+                    </div>
+                  </td>
+                  <td>
+                    <select name="parking_tax_type" class="form-select">
+                      {% for t in tax_types %}
+                      <option {{ "selected" if c.parking_tax_type == t }}>{{ t }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 初期費用 -->
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fw-bold bg-light">初期費用</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">保証金 / 敷金</label>
+            <div class="input-group">
+              <input type="number" name="security_deposit" class="form-control text-end"
+                     value="{{ c.security_deposit or 0 }}" min="0">
+              <span class="input-group-text">円</span>
+            </div>
+          </div>
+          <div class="mb-0">
+            <label class="form-label">礼金</label>
+            <div class="input-group">
+              <input type="number" name="key_money" class="form-control text-end"
+                     value="{{ c.key_money or 0 }}" min="0">
+              <span class="input-group-text">円</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 振込先口座情報 -->
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header fw-bold bg-light"><i class="bi bi-bank"></i> 振込先口座情報</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-2">
+              <label class="form-label">銀行コード</label>
+              <input type="text" name="bank_code" class="form-control"
+                     value="{{ c.bank_code or '' }}" maxlength="4" placeholder="0001">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">銀行名</label>
+              <input type="text" name="bank_name" class="form-control"
+                     value="{{ c.bank_name or '' }}" placeholder="例：みずほ銀行">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">支店コード</label>
+              <input type="text" name="branch_code" class="form-control"
+                     value="{{ c.branch_code or '' }}" maxlength="3" placeholder="001">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">支店名</label>
+              <input type="text" name="branch_name" class="form-control"
+                     value="{{ c.branch_name or '' }}" placeholder="例：新宿支店">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">口座種別</label>
+              <select name="account_type" class="form-select">
+                {% for t in account_types %}
+                <option {{ "selected" if c.account_type == t }}>{{ t }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">口座番号</label>
+              <input type="text" name="account_number" class="form-control"
+                     value="{{ c.account_number or '' }}" maxlength="7" placeholder="1234567">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">口座名義（全角可）</label>
+              <input type="text" name="account_holder" class="form-control"
+                     value="{{ c.account_holder or '' }}" placeholder="例：ヤマダ タロウ">
+              <div class="form-text">全銀フォーマット出力時に自動で半角カナに変換されます</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">振込依頼人名（半角カナ推奨）</label>
+              <input type="text" name="zengin_sender_name" class="form-control"
+                     value="{{ c.zengin_sender_name or '' }}" placeholder="例：ｶﾌﾞｼｷｶｲｼｬ ｻﾝﾌﾟﾙ">
+              <div class="form-text">全銀フォーマットのヘッダーに使用されます</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 会計設定 -->
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header fw-bold bg-light"><i class="bi bi-journal-text"></i> 会計設定</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-2">
+              <label class="form-label">借方科目コード</label>
+              <input type="text" name="debit_account_code" class="form-control"
+                     value="{{ c.debit_account_code or '' }}" placeholder="841">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">借方勘定科目名</label>
+              <input type="text" name="debit_account_name" class="form-control"
+                     value="{{ c.debit_account_name or '地代家賃' }}">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">貸方科目コード</label>
+              <input type="text" name="credit_account_code" class="form-control"
+                     value="{{ c.credit_account_code or '' }}" placeholder="111">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">貸方勘定科目名</label>
+              <input type="text" name="credit_account_name" class="form-control"
+                     value="{{ c.credit_account_name or '普通預金' }}">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">部門コード</label>
+              <input type="text" name="dept_code" class="form-control"
+                     value="{{ c.dept_code or '' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 備考 -->
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <label class="form-label fw-bold">備考</label>
+          <textarea name="notes" class="form-control" rows="3">{{ c.notes or '' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ボタン -->
+    <div class="col-12 d-flex gap-2 pb-4">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check-lg"></i> {{ "更新" if action == "edit" else "登録" }}
+      </button>
+      <a href="{{ url_for('contracts.index') }}" class="btn btn-outline-secondary">キャンセル</a>
+      {% if action == "edit" %}
+      <button type="button" class="btn btn-outline-danger ms-auto"
+              onclick="if(confirm('この契約を削除しますか？')) document.getElementById('deleteForm').submit()">
+        <i class="bi bi-trash"></i> 削除
+      </button>
+      {% endif %}
+    </div>
+  </div>
+</form>
+
+{% if action == "edit" %}
+<form id="deleteForm" method="post" action="{{ url_for('contracts.delete', id=c.id) }}" class="d-none"></form>
+{% endif %}
+{% endblock %}

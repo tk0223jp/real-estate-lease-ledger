@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}ダッシュボード — 賃貸借管理台帳{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>
+    <i class="bi bi-speedometer2 me-2"></i>ダッシュボード
+    <span class="text-muted" style="font-size:0.875rem;font-weight:400;margin-left:0.5rem">{{ year }}年{{ month }}月</span>
+    {% if current_company %}
+      <span class="badge-no ms-2">{{ current_company.name }}</span>
+    {% endif %}
+  </h2>
+  <a href="{{ url_for('payments.index', year=year, month=month) }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-calendar-check me-1"></i>今月の支払管理
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="stat-label">今月の支払合計</div>
+          <div class="stat-value amount" style="color:var(--accent-blue)">¥{{ '{:,}'.format(monthly_total) }}</div>
+          <div class="stat-label mt-1">{{ monthly_count }} 件</div>
+        </div>
+        <i class="bi bi-wallet2 stat-icon" style="color:var(--accent-blue)"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="stat-label">未払件数</div>
+          <div class="stat-value" style="color:{{ 'var(--accent-red)' if unpaid_count else 'var(--accent-green)' }}">
+            {{ unpaid_count }} 件
+          </div>
+          <div class="stat-label mt-1">{{ '要対応' if unpaid_count else 'すべて支払済' }}</div>
+        </div>
+        <i class="bi bi-exclamation-circle stat-icon" style="color:{{ 'var(--accent-red)' if unpaid_count else 'var(--accent-green)' }}"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="stat-label">管理物件数</div>
+          <div class="stat-value" style="color:var(--text-primary)">{{ property_count }} 件</div>
+          <div class="stat-label mt-1">登録済み物件</div>
+        </div>
+        <i class="bi bi-building stat-icon"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="stat-label">契約満了間近</div>
+          <div class="stat-value" style="color:{{ 'var(--accent-yellow)' if expiry_warn_count else 'var(--text-secondary)' }}">
+            {{ expiry_warn_count }} 件
+          </div>
+          <div class="stat-label mt-1">90日以内</div>
+        </div>
+        <i class="bi bi-clock-history stat-icon" style="color:{{ 'var(--accent-yellow)' if expiry_warn_count else 'var(--text-secondary)' }}"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex gap-2 flex-wrap">
+  <a href="{{ url_for('payments.index', year=year, month=month) }}" class="btn btn-primary">
+    <i class="bi bi-calendar-check me-1"></i>今月の支払管理へ
+  </a>
+  <a href="{{ url_for('properties.index') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-building me-1"></i>物件・契約一覧
+  </a>
+  <a href="{{ url_for('properties.new') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-plus-lg me-1"></i>新規登録
+  </a>
+</div>
+{% endblock %}

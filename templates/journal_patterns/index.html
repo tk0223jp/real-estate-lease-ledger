@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}仕訳パターン — 賃貸借管理台帳{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-journal-bookmark me-2" style="color:var(--accent-blue)"></i>仕訳パターン</h2>
+  <a href="{{ url_for('journal_patterns.new') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>新規登録
+  </a>
+</div>
+
+{% if patterns %}
+<div class="table-responsive">
+  <table class="table table-hover mb-0">
+    <thead>
+      <tr>
+        <th>パターン名</th>
+        <th>借方科目</th>
+        <th>貸方科目</th>
+        <th>部門コード</th>
+        <th>備考</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in patterns %}
+      <tr>
+        <td>
+          <span style="font-weight:600">{{ p.name }}</span>
+        </td>
+        <td style="font-size:0.82rem">
+          {% if p.debit_account_code %}
+            <span class="badge-no">{{ p.debit_account_code }}</span>
+          {% endif %}
+          {{ p.debit_account_name }}
+        </td>
+        <td style="font-size:0.82rem">
+          {% if p.credit_account_code %}
+            <span class="badge-no">{{ p.credit_account_code }}</span>
+          {% endif %}
+          {{ p.credit_account_name }}
+        </td>
+        <td class="text-muted" style="font-size:0.82rem">{{ p.dept_code or '—' }}</td>
+        <td class="text-muted" style="font-size:0.82rem">{{ p.notes or '' }}</td>
+        <td class="text-end" style="white-space:nowrap">
+          <a href="{{ url_for('journal_patterns.edit', id=p.id) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <form method="post" action="{{ url_for('journal_patterns.delete', id=p.id) }}"
+                style="display:inline" onsubmit="return confirm('パターン「{{ p.name }}」を削除しますか？')">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-journal-bookmark" style="font-size:2rem;color:var(--text-secondary)"></i>
+    <div class="text-muted mt-2" style="font-size:0.875rem">仕訳パターンが未登録です</div>
+    <a href="{{ url_for('journal_patterns.new') }}" class="btn btn-sm btn-primary mt-3">
+      <i class="bi bi-plus-lg me-1"></i>最初のパターンを登録
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

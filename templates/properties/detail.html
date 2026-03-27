@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}{{ prop.name }} — 賃貸借管理台帳{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <a href="{{ url_for('properties.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h2 class="mb-0">
+      {{ prop.name }}
+      {% if prop.property_no %}
+        <span class="badge-no ms-1">{{ prop.property_no }}</span>
+      {% endif %}
+    </h2>
+    <span class="badge-type">{{ prop.property_type }}</span>
+    {% if prop.company %}
+      <span class="text-muted" style="font-size:0.8rem">[{{ prop.company.code }}] {{ prop.company.name }}</span>
+    {% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('properties.edit', id=prop.id) }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>編集
+    </a>
+    {% if contract %}
+    <a href="{{ url_for('properties.terminate', id=prop.id) }}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-x-circle me-1"></i>解約処理
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+{# 解約済み契約の表示 #}
+{% set terminated_contracts = all_contracts | selectattr('terminated_at') | list %}
+{% if terminated_contracts %}
+<div class="alert alert-warning mb-3" style="font-size:0.875rem">
+  <i class="bi bi-x-circle me-1"></i>
+  {% if terminated_contracts | length == 1 %}
+    {% set tc = terminated_contracts[0] %}
+    この物件は <strong>{{ tc.terminated_at }}</strong> に解約済みです。
+    {% if tc.vacated_at %}退去日: {{ tc.vacated_at }}。{% endif %}
+    {% if tc.termination_reason %}理由: {{ tc.termination_reason }}{% endif %}
+  {% else %}
+    過去の解約済み契約が {{ terminated_contracts | length }} 件あります。
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="row g-3">
+  {# 物件情報 #}
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-building me-1"></i>物件情報</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:0.85rem">
+          <tr><th style="width:120px;padding-left:1rem">所在地</th><td>{{ prop.address }}</td></tr>
+          <tr><th style="padding-left:1rem">貸主名</th><td>{{ prop.landlord_name or '—' }}</td></tr>
+          <tr><th style="padding-left:1rem">貸主連絡先</th><td>{{ prop.landlord_contact or '—' }}</td></tr>
+          {% if prop.notes %}
+          <tr><th style="padding-left:1rem">備考</th><td>{{ prop.notes }}</td></tr>
+          {% endif %}
+          <tr><th style="padding-left:1rem">登録日時</th><td class="text-muted">{{ prop.created_at }}</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# 契約情報 #}
+  <div class="col-md-6">
+    {% if contract %}
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-file-earmark-text me-1"></i>現行契約</span>
+        {% set days = contract.days_until_expiry %}
+        {% if days is none %}
+          <span class="badge-paid">有効（無期限）</span>
+        {% elif days < 0 %}
+          <span class="badge-unpaid">契約満了</span>
+        {% elif days <= 30 %}
+          <span class="badge-unpaid">満了まで{{ days }}日</span>
+        {% elif days <= 90 %}
+          <span class="badge-warn">満了まで{{ days }}日</span>
+        {% else %}
+          <span class="badge-paid">有効</span>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:0.85rem">
+          <tr>
+            <th style="width:120px;padding-left:1rem">契約期間</th>
+            <td>{{ contract.contract_start }} 〜 {{ contract.contract_end or '無期限' }}
+              {% if contract.auto_renewal %}
+                <span class="badge-type ms-1">自動更新</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr><th style="padding-left:1rem">支払日</th><td>毎月 {{ contract.payment_day }}日</td></tr>
+          <tr>
+            <th style="padding-left:1rem">賃料</th>
+            <td class="amount">
+              ¥{{ '{:,}'.format(contract.rent_amount) }}
+              <span class="text-muted" style="font-size:0.75rem">（{{ contract.rent_tax_type }}{% if contract.rent_tax > 0 %}・消費税 ¥{{ '{:,}'.format(contract.rent_tax) }}{% endif %}）</span>
+            </td>
+          </tr>
+          {% if contract.mgmt_fee_amount > 0 %}
+          <tr>
+            <th style="padding-left:1rem">管理費</th>
+            <td class="amount">
+              ¥{{ '{:,}'.format(contract.mgmt_fee_amount) }}
+              <span class="text-muted" style="font-size:0.75rem">（{{ contract.mgmt_fee_tax_type }}{% if contract.mgmt_fee_tax > 0 %}・消費税 ¥{{ '{:,}'.format(contract.mgmt_fee_tax) }}{% endif %}）</span>
+            </td>
+          </tr>
+          {% endif %}
+          {% if contract.parking_amount > 0 %}
+          <tr>
+            <th style="padding-left:1rem">駐車場代</th>
+            <td class="amount">
+              ¥{{ '{:,}'.format(contract.parking_amount) }}
+              <span class="text-muted" style="font-size:0.75rem">（{{ contract.parking_tax_type }}{% if contract.parking_tax > 0 %}・消費税 ¥{{ '{:,}'.format(contract.parking_tax) }}{% endif %}）</span>
+            </td>
+          </tr>
+          {% endif %}
+          <tr>
+            <th style="padding-left:1rem">月額合計</th>
+            <td class="amount fw-bold" style="color:var(--accent-blue)">¥{{ '{:,}'.format(contract.transfer_amount) }} <span class="text-muted fw-normal" style="font-size:0.75rem">（税込）</span></td>
+          </tr>
+          {% if contract.account_number %}
+          <tr>
+            <th style="padding-left:1rem">振込先</th>
+            <td style="font-size:0.8rem">
+              {{ contract.bank_name or '' }}{{ '（' + contract.bank_code + '）' if contract.bank_code }}
+              {{ contract.branch_name or '' }}{{ '（' + contract.branch_code + '）' if contract.branch_code }}<br>
+              {{ contract.account_type }} {{ contract.account_number }}
+              {% if contract.account_holder %}（{{ contract.account_holder }}）{% endif %}
+            </td>
+          </tr>
+          {% endif %}
+          {% if contract.debit_account_name %}
+          <tr>
+            <th style="padding-left:1rem">仕訳科目</th>
+            <td style="font-size:0.8rem">
+              借方: {{ contract.debit_account_name }}{% if contract.debit_account_code %} [{{ contract.debit_account_code }}]{% endif %}
+              ／ 貸方: {{ contract.credit_account_name }}{% if contract.credit_account_code %} [{{ contract.credit_account_code }}]{% endif %}
+            </td>
+          </tr>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="card h-100">
+      <div class="card-body text-center py-4">
+        <i class="bi bi-file-earmark-plus" style="font-size:2rem;color:var(--text-secondary)"></i>
+        <div class="text-muted mt-2" style="font-size:0.875rem">契約情報が未登録です</div>
+        <a href="{{ url_for('properties.edit', id=prop.id) }}" class="btn btn-sm btn-outline-secondary mt-2">
+          <i class="bi bi-pencil me-1"></i>契約を追加
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if all_contracts | length > 1 %}
+<div class="mt-4">
+  <div class="card">
+    <div class="card-header"><i class="bi bi-clock-history me-1"></i>契約履歴</div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>契約開始</th>
+            <th>契約終了</th>
+            <th>自動更新</th>
+            <th class="text-end">月額（税込）</th>
+            <th>状態</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in all_contracts %}
+          <tr>
+            <td>{{ c.contract_start }}</td>
+            <td>{{ c.contract_end or '無期限' }}</td>
+            <td>{{ '有' if c.auto_renewal else '無' }}</td>
+            <td class="text-end amount">¥{{ '{:,}'.format(c.transfer_amount) }}</td>
+            <td>
+              {% if c.terminated_at %}
+                <span class="badge-unpaid">解約済 {{ c.terminated_at }}</span>
+              {% else %}
+                <span class="badge-paid">有効</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

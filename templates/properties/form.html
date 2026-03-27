@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+{% block title %}{{ "物件・契約編集" if prop else "物件・契約登録" }} — 賃貸借管理台帳{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('properties.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h2>
+      {{ "物件・契約 編集" if prop else "物件・契約 新規登録" }}
+      {% if prop and prop.property_no %}
+        <span class="badge-no ms-2">{{ prop.property_no }}</span>
+      {% endif %}
+    </h2>
+  </div>
+  {% if prop %}
+  <form method="post" action="{{ url_for('properties.delete', id=prop.id) }}"
+        onsubmit="return confirm('この物件を削除しますか？')">
+    <button type="submit" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-trash me-1"></i>削除
+    </button>
+  </form>
+  {% endif %}
+</div>
+
+<form method="post" style="max-width:860px" id="propertyForm">
+
+  {# ── 0. AI契約書読み取り ── #}
+  <div class="form-section" style="border-color:rgba(88,166,255,0.3);background:rgba(88,166,255,0.04)">
+    <div class="form-section-title"><i class="bi bi-robot me-1"></i>契約書から自動入力（AI）</div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <input type="file" id="contractFile" accept=".pdf,.jpg,.jpeg,.png,.webp"
+             class="form-control" style="max-width:320px">
+      <button type="button" id="extractBtn" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-magic me-1"></i>AI解析して入力
+      </button>
+      <span id="extractStatus" class="text-muted" style="font-size:0.8rem"></span>
+    </div>
+    <div class="form-text mt-1">PDF・JPEG・PNG に対応。解析結果はフォームに自動反映されます（上書き確認あり）。</div>
+  </div>
+
+  {# ── 1. 基本情報 ── #}
+  <div class="form-section">
+    <div class="form-section-title"><i class="bi bi-building me-1"></i>物件情報</div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">会社</label>
+        <select name="company_id" class="form-select">
+          <option value="">── 未選択 ──</option>
+          {% for c in companies %}
+          <option value="{{ c.id }}" {% if form.get('company_id')|string == c.id|string %}selected{% endif %}>
+            [{{ c.code }}] {{ c.name }}
+          </option>
+          {% endfor %}
+        </select>
+        <div class="form-text">会社を選択すると物件番号が自動採番されます</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">物件種別</label>
+        <select name="property_type" class="form-select">
+          {% for t in ["事務所","駐車場","倉庫","店舗","その他"] %}
+          <option value="{{ t }}" {% if form.get('property_type','その他') == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12">
+        <label class="form-label">物件名 <span style="color:var(--accent-red)">*</span></label>
+        <input type="text" name="name" class="form-control" value="{{ form.get('name','') }}" required placeholder="例）東京本社ビル 3F">
+      </div>
+      <div class="col-12">
+        <label class="form-label">住所 <span style="color:var(--accent-red)">*</span></label>
+        <input type="text" name="address" class="form-control" value="{{ form.get('address','') }}" required placeholder="例）東京都千代田区〇〇1-2-3">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">貸主名</label>
+        <input type="text" name="landlord_name" class="form-control" value="{{ form.get('landlord_name','') }}" placeholder="例）山田太郎">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">貸主連絡先</label>
+        <input type="text" name="landlord_contact" class="form-control" value="{{ form.get('landlord_contact','') }}" placeholder="電話番号・メールなど">
+      </div>
+      <div class="col-12">
+        <label class="form-label">備考</label>
+        <textarea name="notes" class="form-control" rows="2" placeholder="特記事項など">{{ form.get('notes','') }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  {# ── 2. 契約期間 ── #}
+  <div class="form-section">
+    <div class="form-section-title"><i class="bi bi-calendar3 me-1"></i>契約期間
+      <span class="text-muted ms-2" style="font-size:0.7rem;text-transform:none;letter-spacing:0">契約開始日を入力すると契約情報が保存されます</span>
+    </div>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">契約開始日</label>
+        <input type="date" name="contract_start" class="form-control" value="{{ form.get('contract_start','') }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">契約終了日</label>
+        <input type="date" name="contract_end" class="form-control" value="{{ form.get('contract_end','') }}">
+        <div class="form-text">空欄 = 無期限</div>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">支払日</label>
+        <div class="input-group">
+          <input type="number" name="payment_day" class="form-control" value="{{ form.get('payment_day',25) }}" min="1" max="31">
+          <span class="input-group-text">日</span>
+        </div>
+      </div>
+      <div class="col-md-2 d-flex align-items-end pb-2">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="auto_renewal" id="autoRenewal"
+                 {% if form.get('auto_renewal') %}checked{% endif %}>
+          <label class="form-check-label" for="autoRenewal" style="color:var(--text-secondary);font-size:0.8rem">
+            自動更新
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── 3. 月額費用 ── #}
+  <div class="form-section">
+    <div class="form-section-title"><i class="bi bi-currency-yen me-1"></i>月額費用</div>
+    <div class="row g-3">
+      <div class="col-md-5">
+        <label class="form-label">賃料（税抜）</label>
+        <div class="input-group">
+          <span class="input-group-text">¥</span>
+          <input type="number" name="rent_amount" class="form-control" value="{{ form.get('rent_amount',0) }}" min="0">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">課税区分</label>
+        <select name="rent_tax_type" class="form-select">
+          {% for t in tax_types %}
+          <option value="{{ t }}" {% if form.get('rent_tax_type','非課税') == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">仕訳パターン</label>
+        <select name="rent_journal_pattern_id" class="form-select journal-pattern-select"
+                data-target="rent">
+          <option value="">── 直接入力 ──</option>
+          {% for p in journal_patterns %}
+          <option value="{{ p.id }}"
+                  data-debit-code="{{ p.debit_account_code or '' }}"
+                  data-debit-name="{{ p.debit_account_name }}"
+                  data-credit-code="{{ p.credit_account_code or '' }}"
+                  data-credit-name="{{ p.credit_account_name }}"
+                  data-dept="{{ p.dept_code or '' }}"
+                  {% if form.get('rent_journal_pattern_id')|string == p.id|string %}selected{% endif %}>
+            {{ p.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">管理費（税抜）</label>
+        <div class="input-group">
+          <span class="input-group-text">¥</span>
+          <input type="number" name="mgmt_fee_amount" class="form-control" value="{{ form.get('mgmt_fee_amount',0) }}" min="0">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">課税区分</label>
+        <select name="mgmt_fee_tax_type" class="form-select">
+          {% for t in tax_types %}
+          <option value="{{ t }}" {% if form.get('mgmt_fee_tax_type','課税') == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">仕訳パターン</label>
+        <select name="mgmt_fee_journal_pattern_id" class="form-select journal-pattern-select"
+                data-target="mgmt">
+          <option value="">── 直接入力 ──</option>
+          {% for p in journal_patterns %}
+          <option value="{{ p.id }}"
+                  data-debit-code="{{ p.debit_account_code or '' }}"
+                  data-debit-name="{{ p.debit_account_name }}"
+                  data-credit-code="{{ p.credit_account_code or '' }}"
+                  data-credit-name="{{ p.credit_account_name }}"
+                  data-dept="{{ p.dept_code or '' }}"
+                  {% if form.get('mgmt_fee_journal_pattern_id')|string == p.id|string %}selected{% endif %}>
+            {{ p.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">駐車場代（税抜）</label>
+        <div class="input-group">
+          <span class="input-group-text">¥</span>
+          <input type="number" name="parking_amount" class="form-control" value="{{ form.get('parking_amount',0) }}" min="0">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">課税区分</label>
+        <select name="parking_tax_type" class="form-select">
+          {% for t in tax_types %}
+          <option value="{{ t }}" {% if form.get('parking_tax_type','非課税') == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">仕訳パターン</label>
+        <select name="parking_journal_pattern_id" class="form-select journal-pattern-select"
+                data-target="parking">
+          <option value="">── 直接入力 ──</option>
+          {% for p in journal_patterns %}
+          <option value="{{ p.id }}"
+                  data-debit-code="{{ p.debit_account_code or '' }}"
+                  data-debit-name="{{ p.debit_account_name }}"
+                  data-credit-code="{{ p.credit_account_code or '' }}"
+                  data-credit-name="{{ p.credit_account_name }}"
+                  data-dept="{{ p.dept_code or '' }}"
+                  {% if form.get('parking_journal_pattern_id')|string == p.id|string %}selected{% endif %}>
+            {{ p.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">保証金・敷金</label>
+        <div class="input-group">
+          <span class="input-group-text">¥</span>
+          <input type="number" name="security_deposit" class="form-control" value="{{ form.get('security_deposit',0) }}" min="0">
+        </div>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">礼金</label>
+        <div class="input-group">
+          <span class="input-group-text">¥</span>
+          <input type="number" name="key_money" class="form-control" value="{{ form.get('key_money',0) }}" min="0">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── 4. 振込先口座 ── #}
+  <div class="form-section">
+    <div class="form-section-title"><i class="bi bi-bank me-1"></i>振込先口座（全銀協フォーマット用）</div>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">銀行コード</label>
+        <input type="text" name="bank_code" class="form-control" value="{{ form.get('bank_code','') }}" maxlength="4" placeholder="0001">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">銀行名</label>
+        <input type="text" name="bank_name" class="form-control" value="{{ form.get('bank_name','') }}" placeholder="みずほ銀行">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">支店コード</label>
+        <input type="text" name="branch_code" class="form-control" value="{{ form.get('branch_code','') }}" maxlength="3" placeholder="001">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">支店名</label>
+        <input type="text" name="branch_name" class="form-control" value="{{ form.get('branch_name','') }}" placeholder="東京営業部">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">口座種別</label>
+        <select name="account_type" class="form-select">
+          {% for t in account_types %}
+          <option value="{{ t }}" {% if form.get('account_type','普通') == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">口座番号（7桁）</label>
+        <input type="text" name="account_number" class="form-control" value="{{ form.get('account_number','') }}" maxlength="7" placeholder="1234567">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">口座名義（カタカナ）</label>
+        <input type="text" name="account_holder" class="form-control" value="{{ form.get('account_holder','') }}" placeholder="ヤマダ タロウ">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">振込依頼人名（半角カナ）</label>
+        <input type="text" name="zengin_sender_name" class="form-control" value="{{ form.get('zengin_sender_name','') }}" placeholder="ｶ)ｻﾝﾌﾟﾙ">
+        <div class="form-text">全銀協ファイル出力時に使用</div>
+      </div>
+    </div>
+  </div>
+
+  {# ── 5. 会計設定 ── #}
+  <div class="form-section">
+    <div class="form-section-title"><i class="bi bi-journal-text me-1"></i>会計設定（仕訳CSV用）</div>
+    <div class="row g-3">
+      <div class="col-md-2">
+        <label class="form-label">借方科目コード</label>
+        <input type="text" name="debit_account_code" class="form-control" value="{{ form.get('debit_account_code','') }}" placeholder="600">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">借方科目名</label>
+        <input type="text" name="debit_account_name" class="form-control" value="{{ form.get('debit_account_name','地代家賃') }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">貸方科目コード</label>
+        <input type="text" name="credit_account_code" class="form-control" value="{{ form.get('credit_account_code','') }}" placeholder="110">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">貸方科目名</label>
+        <input type="text" name="credit_account_name" class="form-control" value="{{ form.get('credit_account_name','普通預金') }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">部門コード</label>
+        <input type="text" name="dept_code" class="form-control" value="{{ form.get('dept_code','') }}" placeholder="01">
+      </div>
+      <div class="col-12">
+        <label class="form-label">契約備考</label>
+        <textarea name="contract_notes" class="form-control" rows="2" placeholder="仕訳摘要や補足事項など">{{ form.get('contract_notes','') }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-1">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg me-1"></i>{{ "更新する" if prop else "登録する" }}
+    </button>
+    <a href="{{ url_for('properties.index') }}" class="btn btn-outline-secondary">キャンセル</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── 仕訳パターン選択時に借方/貸方科目を自動補完 ──
+// 最後に選択されたパターンで共通フィールドを上書きする
+document.querySelectorAll('.journal-pattern-select').forEach(function(sel) {
+  sel.addEventListener('change', function() {
+    var opt = this.options[this.selectedIndex];
+    if (!opt.value) return;
+    var form = document.getElementById('propertyForm');
+    var set = function(name, val) {
+      var el = form.querySelector('[name="' + name + '"]');
+      if (el) el.value = val;
+    };
+    set('debit_account_code',  opt.dataset.debitCode);
+    set('debit_account_name',  opt.dataset.debitName);
+    set('credit_account_code', opt.dataset.creditCode);
+    set('credit_account_name', opt.dataset.creditName);
+    if (opt.dataset.dept) set('dept_code', opt.dataset.dept);
+  });
+});
+
+// ── AI契約書読み取り ──
+document.getElementById('extractBtn').addEventListener('click', function() {
+  var fileInput = document.getElementById('contractFile');
+  var status = document.getElementById('extractStatus');
+  if (!fileInput.files.length) {
+    status.textContent = 'ファイルを選択してください。';
+    status.style.color = 'var(--accent-red)';
+    return;
+  }
+  var formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  status.textContent = '解析中...';
+  status.style.color = 'var(--text-secondary)';
+  this.disabled = true;
+
+  fetch('{{ url_for("properties.extract_contract") }}', {
+    method: 'POST',
+    body: formData
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    document.getElementById('extractBtn').disabled = false;
+    if (data.error) {
+      status.textContent = 'エラー: ' + data.error;
+      status.style.color = 'var(--accent-red)';
+      return;
+    }
+    var form = document.getElementById('propertyForm');
+    var set = function(name, val) {
+      if (val === null || val === undefined) return;
+      var el = form.querySelector('[name="' + name + '"]');
+      if (!el) return;
+      if (el.tagName === 'SELECT') {
+        for (var i = 0; i < el.options.length; i++) {
+          if (el.options[i].value == String(val)) { el.selectedIndex = i; break; }
+        }
+      } else {
+        el.value = val;
+      }
+    };
+    set('name',              data.name);
+    set('address',           data.address);
+    set('property_type',     data.property_type);
+    set('landlord_name',     data.landlord_name);
+    set('landlord_contact',  data.landlord_contact);
+    set('contract_start',    data.contract_start);
+    set('contract_end',      data.contract_end);
+    set('payment_day',       data.payment_day);
+    set('rent_amount',       data.rent_amount);
+    set('rent_tax_type',     data.rent_tax_type);
+    set('mgmt_fee_amount',   data.mgmt_fee_amount);
+    set('mgmt_fee_tax_type', data.mgmt_fee_tax_type);
+    set('parking_amount',    data.parking_amount);
+    set('parking_tax_type',  data.parking_tax_type);
+    set('security_deposit',  data.security_deposit);
+    set('key_money',         data.key_money);
+    set('bank_name',         data.bank_name);
+    set('bank_code',         data.bank_code);
+    set('branch_name',       data.branch_name);
+    set('branch_code',       data.branch_code);
+    set('account_type',      data.account_type);
+    set('account_number',    data.account_number);
+    set('account_holder',    data.account_holder);
+    if (data.auto_renewal !== null && data.auto_renewal !== undefined) {
+      var cb = form.querySelector('[name="auto_renewal"]');
+      if (cb) cb.checked = !!data.auto_renewal;
+    }
+    status.textContent = '解析完了。内容を確認してください。';
+    status.style.color = 'var(--accent-green)';
+  })
+  .catch(function(e) {
+    document.getElementById('extractBtn').disabled = false;
+    status.textContent = '通信エラーが発生しました。';
+    status.style.color = 'var(--accent-red)';
+  });
+});
+</script>
+{% endblock %}

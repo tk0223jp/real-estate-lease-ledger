@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ "仕訳パターン編集" if pattern else "仕訳パターン登録" }} — 賃貸借管理台帳{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('journal_patterns.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h2>{{ "仕訳パターン 編集" if pattern else "仕訳パターン 新規登録" }}</h2>
+  </div>
+  {% if pattern %}
+  <form method="post" action="{{ url_for('journal_patterns.delete', id=pattern.id) }}"
+        onsubmit="return confirm('このパターンを削除しますか？')">
+    <button type="submit" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-trash me-1"></i>削除
+    </button>
+  </form>
+  {% endif %}
+</div>
+
+<form method="post" style="max-width:600px">
+  <div class="form-section">
+    <div class="form-section-title"><i class="bi bi-journal-bookmark me-1"></i>パターン情報</div>
+    <div class="row g-3">
+      <div class="col-12">
+        <label class="form-label">パターン名 <span style="color:var(--accent-red)">*</span></label>
+        <input type="text" name="name" class="form-control" value="{{ form.get('name','') }}"
+               required placeholder="例）地代家賃（普通預金払）">
+        <div class="form-text">費目選択ドロップダウンに表示される名称です</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title"><i class="bi bi-arrow-left-right me-1"></i>仕訳科目</div>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">借方科目コード</label>
+        <input type="text" name="debit_account_code" class="form-control"
+               value="{{ form.get('debit_account_code','') }}" placeholder="600">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">借方科目名 <span style="color:var(--accent-red)">*</span></label>
+        <input type="text" name="debit_account_name" class="form-control"
+               value="{{ form.get('debit_account_name','地代家賃') }}" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">貸方科目コード</label>
+        <input type="text" name="credit_account_code" class="form-control"
+               value="{{ form.get('credit_account_code','') }}" placeholder="110">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">貸方科目名 <span style="color:var(--accent-red)">*</span></label>
+        <input type="text" name="credit_account_name" class="form-control"
+               value="{{ form.get('credit_account_name','普通預金') }}" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">部門コード</label>
+        <input type="text" name="dept_code" class="form-control"
+               value="{{ form.get('dept_code','') }}" placeholder="01">
+        <div class="form-text">省略可</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title"><i class="bi bi-chat-left-text me-1"></i>備考</div>
+    <div class="row g-3">
+      <div class="col-12">
+        <textarea name="notes" class="form-control" rows="2"
+                  placeholder="このパターンの説明など（任意）">{{ form.get('notes','') }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-1">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg me-1"></i>{{ "更新する" if pattern else "登録する" }}
+    </button>
+    <a href="{{ url_for('journal_patterns.index') }}" class="btn btn-outline-secondary">キャンセル</a>
+  </div>
+</form>
+{% endblock %}

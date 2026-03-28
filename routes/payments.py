@@ -1,4 +1,6 @@
 import calendar
+import io
+import zipfile
 from datetime import date, datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
 from app import db
@@ -38,8 +40,23 @@ def index():
                  .join(Contract, PaymentSchedule.contract_id == Contract.id)
                  .join(Property, PaymentSchedule.property_id == Property.id)
                  .filter(Contract.is_deleted == 0, Property.is_deleted == 0)
-                 .order_by(Property.name)
+                 .order_by(Contract.payment_day, Property.name)
                  .all())
+
+    # payment_day ごとにグループ化
+    last_day = calendar.monthrange(year, month)[1]
+    groups = {}  # {payment_day: {"schedules": [...], "total": int, "unpaid_count": int}}
+    for s in schedules:
+        day = s.contract.payment_day if s.contract else 25
+        if day not in groups:
+            groups[day] = {"schedules": [], "total": 0, "unpaid_total": 0,
+                           "unpaid_count": 0, "payment_date": date(year, month, min(day, last_day))}
+        groups[day]["schedules"].append(s)
+        groups[day]["total"] += s.total_amount
+        if not s.is_paid:
+            groups[day]["unpaid_total"] += s.total_amount
+            groups[day]["unpaid_count"] += 1
+    groups = dict(sorted(groups.items()))  # payment_day 昇順
 
     total_amount = sum(s.total_amount for s in schedules)
     paid_amount = sum(s.total_amount for s in schedules if s.is_paid)
@@ -47,6 +64,7 @@ def index():
 
     return render_template("payments/index.html",
                            schedules=schedules,
+                           groups=groups,
                            year=year, month=month,
                            total_amount=total_amount,
                            paid_amount=paid_amount,
@@ -196,5 +214,79 @@ def export_journal():
     return Response(
         csv_text.encode("utf-8-sig"),
         mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@bp.route("/export/combined")
+def export_combined():
+    """指定支払日グループの全銀ファイル + 仕訳CSV を ZIP で出力"""
+    from services.zengin import generate_zengin
+    from services.journal import generate_journal_csv
+
+    year = request.args.get("year", type=int)
+    month = request.args.get("month", type=int)
+    payment_day = request.args.get("payment_day", type=int)
+    transfer_date_str = request.args.get("transfer_date", "")
+
+    if not all([year, month, payment_day, transfer_date_str]):
+        flash("パラメータが不足しています。", "error")
+        return redirect(url_for("payments.index"))
+
+    try:
+        transfer_date = date.fromisoformat(transfer_date_str)
+    except ValueError:
+        flash("振込実行日の形式が不正です（YYYY-MM-DD）。", "error")
+        return redirect(url_for("payments.index", year=year, month=month))
+
+    # 対象グループのスケジュール（未払のみ → 全銀用）
+    all_schedules = (PaymentSchedule.query
+                     .filter_by(payment_year=year, payment_month=month)
+                     .join(Contract, PaymentSchedule.contract_id == Contract.id)
+                     .filter(Contract.is_deleted == 0,
+                             Contract.payment_day == payment_day)
+                     .all())
+
+    unpaid = [s for s in all_schedules if not s.is_paid]
+
+    if not all_schedules:
+        flash("対象スケジュールがありません。", "warning")
+        return redirect(url_for("payments.index", year=year, month=month))
+
+    # 全銀ファイル生成（未払のみ）
+    zengin_data = None
+    if unpaid:
+        sender_names = set(
+            db.session.get(Contract, s.contract_id).zengin_sender_name or ""
+            for s in unpaid
+        )
+        if len(sender_names) > 1:
+            flash("振込依頼人名が複数混在しているため全銀ファイルを生成できません。"
+                  "各契約の振込依頼人名を統一してください。", "error")
+            return redirect(url_for("payments.index", year=year, month=month))
+        try:
+            zengin_data = generate_zengin(unpaid, transfer_date)
+        except ValueError as e:
+            flash(f"全銀ファイル生成エラー: {e}", "error")
+            return redirect(url_for("payments.index", year=year, month=month))
+
+    # 仕訳CSV生成（グループ全件、振込実行日で伝票日付を上書き）
+    csv_text = generate_journal_csv(all_schedules, transfer_date=transfer_date_str)
+
+    # ZIP 作成
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        if zengin_data:
+            zf.writestr(f"zengin_{year}{month:02d}_{payment_day:02d}d.txt", zengin_data)
+        zf.writestr(
+            f"journal_{year}{month:02d}_{payment_day:02d}d.csv",
+            csv_text.encode("utf-8-sig")
+        )
+    zip_buffer.seek(0)
+
+    filename = f"payment_{year}{month:02d}_{payment_day:02d}d.zip"
+    return Response(
+        zip_buffer.getvalue(),
+        mimetype="application/zip",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )

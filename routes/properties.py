@@ -1,6 +1,7 @@
 from flask import (Blueprint, render_template, request, redirect,
-                   url_for, flash, session, jsonify)
+                   url_for, flash, session, jsonify, Response)
 from datetime import datetime
+import csv, io
 from app import db
 from models import Company, Contract, JournalPattern, Property, generate_property_no
 
@@ -74,6 +75,14 @@ def _journal_patterns():
     return JournalPattern.query.filter_by(is_deleted=0).order_by(JournalPattern.name).all()
 
 
+def _find_default_pattern_id(patterns, keyword):
+    """借方科目名またはパターン名にキーワードを含む最初のパターンのIDを返す"""
+    for p in patterns:
+        if keyword in (p.debit_account_name or "") or keyword in (p.name or ""):
+            return p.id
+    return None
+
+
 @bp.route("/")
 def index():
     from datetime import date
@@ -96,11 +105,14 @@ def new():
         address = request.form.get("address", "").strip()
         if not name or not address:
             flash("物件名と住所は必須です。", "error")
+            pats = _journal_patterns()
             return render_template("properties/form.html",
                                    prop=None, contract=None,
                                    companies=companies, form=request.form,
                                    tax_types=TAX_TYPES, account_types=ACCOUNT_TYPES,
-                                   journal_patterns=_journal_patterns())
+                                   journal_patterns=pats,
+                                   default_chidai_id=_find_default_pattern_id(pats, "地代家賃"),
+                                   default_parking_id=_find_default_pattern_id(pats, "駐車場"))
 
         company_id = request.form.get("company_id") or None
         if company_id:
@@ -147,11 +159,14 @@ def new():
         "credit_account_name": "普通預金",
         "company_id": _current_company_id() or "",
     }
+    pats = _journal_patterns()
     return render_template("properties/form.html",
                            prop=None, contract=None,
                            companies=companies, form=defaults,
                            tax_types=TAX_TYPES, account_types=ACCOUNT_TYPES,
-                           journal_patterns=_journal_patterns())
+                           journal_patterns=pats,
+                           default_chidai_id=_find_default_pattern_id(pats, "地代家賃"),
+                           default_parking_id=_find_default_pattern_id(pats, "駐車場"))
 
 
 @bp.route("/<int:id>")
@@ -178,11 +193,14 @@ def edit(id):
         address = request.form.get("address", "").strip()
         if not name or not address:
             flash("物件名と住所は必須です。", "error")
+            pats = _journal_patterns()
             return render_template("properties/form.html",
                                    prop=prop, contract=contract,
                                    companies=companies, form=request.form,
                                    tax_types=TAX_TYPES, account_types=ACCOUNT_TYPES,
-                                   journal_patterns=_journal_patterns())
+                                   journal_patterns=pats,
+                                   default_chidai_id=_find_default_pattern_id(pats, "地代家賃"),
+                                   default_parking_id=_find_default_pattern_id(pats, "駐車場"))
 
         # 会社変更時の物件番号採番
         new_company_id = request.form.get("company_id") or None
@@ -282,11 +300,14 @@ def edit(id):
             "parking_credit_account_name": "普通預金",
         })
 
+    pats = _journal_patterns()
     return render_template("properties/form.html",
                            prop=prop, contract=contract,
                            companies=companies, form=form,
                            tax_types=TAX_TYPES, account_types=ACCOUNT_TYPES,
-                           journal_patterns=_journal_patterns())
+                           journal_patterns=pats,
+                           default_chidai_id=_find_default_pattern_id(pats, "地代家賃"),
+                           default_parking_id=_find_default_pattern_id(pats, "駐車場"))
 
 
 @bp.route("/<int:id>/terminate", methods=["GET", "POST"])
@@ -330,6 +351,132 @@ def extract_contract():
     from services.extractor import extract_from_contract
     result = extract_from_contract(file_bytes, media_type)
     return jsonify(result)
+
+
+@bp.route("/export", methods=["GET"])
+def export():
+    """CSVダウンロード用フィルター画面"""
+    companies = Company.query.filter_by(is_deleted=0).order_by(Company.code).all()
+    return render_template("properties/export.html",
+                           companies=companies,
+                           property_types=Property.PROPERTY_TYPES)
+
+
+@bp.route("/export-csv", methods=["GET"])
+def export_csv():
+    """物件・契約情報をCSV出力"""
+    from datetime import date as _date
+
+    q = (Property.query
+         .filter_by(is_deleted=0)
+         .outerjoin(Contract, (Contract.property_id == Property.id) & (Contract.is_deleted == 0)))
+
+    # フィルター
+    company_id = request.args.get("company_id")
+    if company_id:
+        q = q.filter(Property.company_id == int(company_id))
+
+    property_type = request.args.get("property_type")
+    if property_type:
+        q = q.filter(Property.property_type == property_type)
+
+    contract_start_from = request.args.get("contract_start_from")
+    contract_start_to   = request.args.get("contract_start_to")
+    contract_end_from   = request.args.get("contract_end_from")
+    contract_end_to     = request.args.get("contract_end_to")
+
+    if contract_start_from:
+        q = q.filter(Contract.contract_start >= contract_start_from)
+    if contract_start_to:
+        q = q.filter(Contract.contract_start <= contract_start_to)
+    if contract_end_from:
+        q = q.filter(Contract.contract_end >= contract_end_from)
+    if contract_end_to:
+        q = q.filter(Contract.contract_end <= contract_end_to)
+
+    properties = q.with_entities(Property).distinct().order_by(
+        Property.property_no.nullslast(), Property.name).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "物件番号", "物件名", "住所", "物件種別", "会社コード", "会社名",
+        "貸主名", "貸主連絡先", "物件備考",
+        "契約開始日", "契約終了日", "自動更新", "支払日",
+        "賃料(税抜)", "賃料課税区分",
+        "管理費(税抜)", "管理費課税区分",
+        "駐車場代(税抜)", "駐車場代課税区分",
+        "月額合計(税込)",
+        "敷金保証金", "礼金",
+        "賃料_借方科目コード", "賃料_借方科目名", "賃料_貸方科目コード", "賃料_貸方科目名",
+        "管理費_借方科目コード", "管理費_借方科目名", "管理費_貸方科目コード", "管理費_貸方科目名",
+        "駐車場_借方科目コード", "駐車場_借方科目名", "駐車場_貸方科目コード", "駐車場_貸方科目名",
+        "部門コード",
+        "銀行コード", "銀行名", "支店コード", "支店名", "口座種別", "口座番号", "口座名義",
+        "解約日", "敷金返金日", "解約理由",
+        "契約備考",
+    ])
+
+    for prop in properties:
+        # 解約済みを含む全契約を取得
+        contracts = (Contract.query
+                     .filter_by(property_id=prop.id, is_deleted=0)
+                     .order_by(Contract.contract_start.desc())
+                     .all())
+        if not contracts:
+            # 契約なしの物件も1行出力
+            writer.writerow([
+                prop.property_no or "", prop.name, prop.address, prop.property_type,
+                prop.company.code if prop.company else "",
+                prop.company.name if prop.company else "",
+                prop.landlord_name or "", prop.landlord_contact or "", prop.notes or "",
+            ] + [""] * 33)
+            continue
+
+        for c in contracts:
+            # 契約期間フィルターで絞り込んでいる場合、関係ない契約行を除外
+            if contract_start_from and c.contract_start < contract_start_from:
+                continue
+            if contract_start_to and c.contract_start > contract_start_to:
+                continue
+            if contract_end_from and (not c.contract_end or c.contract_end < contract_end_from):
+                continue
+            if contract_end_to and (not c.contract_end or c.contract_end > contract_end_to):
+                continue
+
+            writer.writerow([
+                prop.property_no or "", prop.name, prop.address, prop.property_type,
+                prop.company.code if prop.company else "",
+                prop.company.name if prop.company else "",
+                prop.landlord_name or "", prop.landlord_contact or "", prop.notes or "",
+                c.contract_start, c.contract_end or "", "有" if c.auto_renewal else "無",
+                c.payment_day,
+                c.rent_amount, c.rent_tax_type,
+                c.mgmt_fee_amount, c.mgmt_fee_tax_type,
+                c.parking_amount, c.parking_tax_type,
+                c.transfer_amount,
+                c.security_deposit, c.key_money,
+                c.rent_debit_account_code or "", c.rent_debit_account_name or "地代家賃",
+                c.rent_credit_account_code or "", c.rent_credit_account_name or "普通預金",
+                c.mgmt_debit_account_code or "", c.mgmt_debit_account_name or "地代家賃",
+                c.mgmt_credit_account_code or "", c.mgmt_credit_account_name or "普通預金",
+                c.parking_debit_account_code or "", c.parking_debit_account_name or "駐車場代",
+                c.parking_credit_account_code or "", c.parking_credit_account_name or "普通預金",
+                c.dept_code or "",
+                c.bank_code or "", c.bank_name or "",
+                c.branch_code or "", c.branch_name or "",
+                c.account_type or "", c.account_number or "", c.account_holder or "",
+                c.terminated_at or "", c.deposit_returned_at or "", c.termination_reason or "",
+                c.notes or "",
+            ])
+
+    csv_bytes = output.getvalue().encode("utf-8-sig")
+    filename = f"contracts_{_date.today().isoformat()}.csv"
+    return Response(
+        csv_bytes,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
+    )
 
 
 @bp.route("/<int:id>/delete", methods=["POST"])

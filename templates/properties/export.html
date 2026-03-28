@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}物件・契約 CSV出力 — 賃貸借管理台帳{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('properties.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h2><i class="bi bi-download me-2"></i>物件・契約 CSV出力</h2>
+  </div>
+</div>
+
+<div style="max-width:640px">
+  <div class="card">
+    <div class="card-header"><i class="bi bi-funnel me-1"></i>絞り込み条件</div>
+    <div class="card-body">
+      <form method="get" action="{{ url_for('properties.export_csv') }}">
+        <div class="row g-3">
+
+          <div class="col-md-6">
+            <label class="form-label">会社</label>
+            <select name="company_id" class="form-select">
+              <option value="">── すべて ──</option>
+              {% for c in companies %}
+              <option value="{{ c.id }}">{{ '[' ~ c.code ~ '] ' ~ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">物件種別</label>
+            <select name="property_type" class="form-select">
+              <option value="">── すべて ──</option>
+              {% for t in property_types %}
+              <option value="{{ t }}">{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">契約開始日（範囲）</label>
+            <div class="d-flex align-items-center gap-2">
+              <input type="date" name="contract_start_from" class="form-control">
+              <span class="text-muted">〜</span>
+              <input type="date" name="contract_start_to" class="form-control">
+            </div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">契約終了日（範囲）</label>
+            <div class="d-flex align-items-center gap-2">
+              <input type="date" name="contract_end_from" class="form-control">
+              <span class="text-muted">〜</span>
+              <input type="date" name="contract_end_to" class="form-control">
+            </div>
+            <div class="form-text">契約終了日が設定されている契約のみが対象になります。</div>
+          </div>
+
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-file-earmark-arrow-down me-1"></i>CSVダウンロード
+          </button>
+          <a href="{{ url_for('properties.index') }}" class="btn btn-outline-secondary">キャンセル</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

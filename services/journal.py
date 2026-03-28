@@ -72,9 +72,10 @@ def _resolve_accounts(pattern, debit_code, debit_name, credit_code, credit_name,
     return (debit_code, debit_name, credit_code, credit_name, dept or "")
 
 
-def generate_journal_csv(schedules: list) -> str:
+def generate_journal_csv(schedules: list, transfer_date: str = None) -> str:
     """
     仕訳CSVを文字列（UTF-8）で返す。
+    transfer_date が指定された場合（YYYY-MM-DD）、伝票日付をその日付で上書きする。
     呼び出し元で .encode('utf-8-sig') してダウンロードする。
     """
     from app import db
@@ -89,8 +90,12 @@ def generate_journal_csv(schedules: list) -> str:
         prop = db.session.get(Property, s.property_id)
         prop_name = prop.name if prop else f"物件ID:{s.property_id}"
 
-        date_str = _payment_date(s.payment_year, s.payment_month,
-                                 contract.payment_day if contract else 25)
+        if transfer_date:
+            # YYYY-MM-DD → YYYY/MM/DD
+            date_str = transfer_date.replace("-", "/")
+        else:
+            date_str = _payment_date(s.payment_year, s.payment_month,
+                                     contract.payment_day if contract else 25)
         base_summary = f"{prop_name} {s.payment_year}年{s.payment_month}月分"
 
         # パターン解決（費目ごと）

@@ -218,16 +218,16 @@ def export_journal():
     )
 
 
-@bp.route("/export/combined")
+@bp.route("/export/combined", methods=["POST"])
 def export_combined():
-    """指定支払日グループの全銀ファイル + 仕訳CSV を ZIP で出力"""
+    """指定支払日グループの全銀ファイル + 仕訳CSV を ZIP で出力し、未払を支払済に更新"""
     from services.zengin import generate_zengin
     from services.journal import generate_journal_csv
 
-    year = request.args.get("year", type=int)
-    month = request.args.get("month", type=int)
-    payment_day = request.args.get("payment_day", type=int)
-    transfer_date_str = request.args.get("transfer_date", "")
+    year = request.form.get("year", type=int)
+    month = request.form.get("month", type=int)
+    payment_day = request.form.get("payment_day", type=int)
+    transfer_date_str = request.form.get("transfer_date", "")
 
     if not all([year, month, payment_day, transfer_date_str]):
         flash("パラメータが不足しています。", "error")
@@ -283,6 +283,15 @@ def export_combined():
             csv_text.encode("utf-8-sig")
         )
     zip_buffer.seek(0)
+
+    # 全銀ファイルに含めた未払スケジュールを支払済に更新
+    if unpaid:
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        for s in unpaid:
+            s.is_paid = 1
+            s.paid_date = transfer_date_str
+            s.updated_at = now_str
+        db.session.commit()
 
     filename = f"payment_{year}{month:02d}_{payment_day:02d}d.zip"
     return Response(

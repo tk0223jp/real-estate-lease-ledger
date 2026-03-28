@@ -43,7 +43,7 @@
             {% endif %}
           </td>
           <td>
-            <a href="{{ url_for('properties.detail', id=prop.id) }}" class="fw-semibold" style="text-decoration:none;color:var(--text-primary)">
+            <a href="{{ url_for('properties.detail', id=prop.id) }}" class="prop-link">
               {{ prop.name }}
             </a>
             {% if prop.address %}

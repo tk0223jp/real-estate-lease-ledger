@@ -433,6 +433,11 @@
     a { color: var(--accent-blue); }
     a:hover { color: #79b8ff; }
 
+    /* テーブル内のリンクは本文色で表示（青リンクは見にくいため） */
+    .table a { color: var(--text-primary) !important; text-decoration: none; }
+    .table a:hover { color: var(--accent-blue) !important; }
+    .table a.prop-link { font-weight: 500; }
+
     .amount { font-variant-numeric: tabular-nums; }
 
     @media (max-width: 768px) {

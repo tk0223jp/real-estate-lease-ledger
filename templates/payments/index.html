@@ -71,109 +71,141 @@
   </a>
 </div>
 
-<!-- 支払日グループ別カード -->
+<!-- 支払日グループ別カード（折りたたみ式） -->
 {% for day, grp in groups.items() %}
+{% set collapse_id = "grp-" ~ day %}
+{% set has_unpaid = grp.unpaid_count > 0 %}
 <div class="card mb-3">
-  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-    <div class="d-flex align-items-center gap-3">
-      <span style="font-weight:700;font-size:1rem">
+
+  {# ── グループヘッダー（クリックで開閉） ── #}
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2"
+       style="cursor:pointer;user-select:none"
+       data-bs-toggle="collapse" data-bs-target="#{{ collapse_id }}"
+       aria-expanded="{{ 'true' if has_unpaid else 'false' }}"
+       aria-controls="{{ collapse_id }}">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+      {# 開閉アイコン #}
+      <i class="bi bi-chevron-{{ 'down' if has_unpaid else 'right' }} toggle-icon"
+         style="font-size:0.8rem;color:var(--text-secondary);transition:transform 0.2s"></i>
+
+      <span style="font-weight:700;font-size:0.95rem;color:var(--text-primary)">
         <i class="bi bi-calendar-date me-1"></i>
         毎月 {{ day }} 日払い
-        <span class="text-muted ms-1" style="font-weight:400;font-size:0.82rem">（{{ year }}/{{ '%02d'%month }}/{{ '%02d'%[day, grp.payment_date.day]|min }}）</span>
+        <span style="font-weight:400;font-size:0.78rem;color:var(--text-secondary);margin-left:0.3rem">
+          （{{ year }}/{{ '%02d'%month }}/{{ '%02d'%grp.payment_date.day }}）
+        </span>
       </span>
+
       <span class="badge-type">{{ grp.schedules|length }}件</span>
-      <span class="amount" style="color:var(--accent-blue);font-weight:700">¥{{ '{:,}'.format(grp.total) }}</span>
-      {% if grp.unpaid_count > 0 %}
-        <span style="color:var(--accent-red);font-size:0.8rem">未払 {{ grp.unpaid_count }}件 ¥{{ '{:,}'.format(grp.unpaid_total) }}</span>
+
+      <span class="amount fw-bold" style="color:var(--accent-blue)">
+        ¥{{ '{:,}'.format(grp.total) }}
+      </span>
+
+      {% if has_unpaid %}
+        <span style="color:var(--accent-red);font-size:0.82rem">
+          <i class="bi bi-exclamation-circle me-1"></i>未払 {{ grp.unpaid_count }}件
+          ¥{{ '{:,}'.format(grp.unpaid_total) }}
+        </span>
       {% else %}
-        <span style="color:var(--accent-green);font-size:0.8rem"><i class="bi bi-check-circle me-1"></i>全件支払済</span>
+        <span style="color:var(--accent-green);font-size:0.82rem">
+          <i class="bi bi-check-circle me-1"></i>全件支払済
+        </span>
       {% endif %}
     </div>
+
+    {# 全銀・仕訳出力ボタン（クリックで collapse が動かないよう伝播を止める） #}
     <button type="button" class="btn btn-sm btn-combined-export"
             style="background-color:rgba(88,166,255,0.12);color:var(--accent-blue);border:1px solid rgba(88,166,255,0.3)"
             data-day="{{ day }}" data-year="{{ year }}" data-month="{{ month }}"
+            data-default-date="{{ grp.payment_date.isoformat() }}"
             data-bs-toggle="modal" data-bs-target="#combinedModal"
-            data-default-date="{{ grp.payment_date.isoformat() }}">
+            onclick="event.stopPropagation()">
       <i class="bi bi-file-zip me-1"></i>全銀・仕訳 出力
     </button>
   </div>
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover mb-0" style="font-size:0.875rem">
-        <thead>
-          <tr>
-            <th style="padding-left:1rem">物件名</th>
-            <th class="text-end">賃料（税抜）</th>
-            <th class="text-end">管理費</th>
-            <th class="text-end">駐車場代</th>
-            <th class="text-end">消費税</th>
-            <th class="text-end">合計（税込）</th>
-            <th>状態</th>
-            <th>支払日</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for s in grp.schedules %}
-          <tr>
-            <td style="padding-left:1rem">
-              <a href="{{ url_for('properties.detail', id=s.property_id) }}" style="color:var(--text-primary);text-decoration:none;font-weight:500">
-                {{ s.contract.property.name }}
-              </a>
-              {% if s.contract.property.property_no %}
-                <span class="badge-no ms-1">{{ s.contract.property.property_no }}</span>
-              {% endif %}
-            </td>
-            <td class="text-end amount">{{ '{:,}'.format(s.rent_amount) }}</td>
-            <td class="text-end amount">{{ '{:,}'.format(s.mgmt_fee_amount) if s.mgmt_fee_amount else '—' }}</td>
-            <td class="text-end amount">{{ '{:,}'.format(s.parking_amount) if s.parking_amount else '—' }}</td>
-            <td class="text-end amount">{{ '{:,}'.format(s.tax_amount) }}</td>
-            <td class="text-end amount fw-bold">¥{{ '{:,}'.format(s.total_amount) }}</td>
-            <td>
-              {% if s.is_paid %}
-                <span class="badge-paid"><i class="bi bi-check-lg me-1"></i>支払済</span>
-              {% else %}
-                <span class="badge-unpaid">未払</span>
-              {% endif %}
-            </td>
-            <td class="text-muted" style="font-size:0.8rem">{{ s.paid_date or '—' }}</td>
-            <td class="text-end">
-              {% if s.is_paid %}
-              <form method="post" action="{{ url_for('payments.mark_unpaid', id=s.id) }}" class="d-inline">
-                <button type="submit" class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem">未払に戻す</button>
-              </form>
-              {% else %}
-              <form method="post" action="{{ url_for('payments.mark_paid', id=s.id) }}" class="d-inline">
-                <button type="submit" class="btn btn-sm" style="background-color:rgba(63,185,80,0.12);color:var(--accent-green);border:1px solid rgba(63,185,80,0.3);font-size:0.75rem">
-                  支払済にする
-                </button>
-              </form>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr style="background-color:var(--bg-secondary);font-weight:700">
-            <td style="padding-left:1rem">小計</td>
-            <td class="text-end amount">{{ '{:,}'.format(grp.schedules | sum(attribute='rent_amount')) }}</td>
-            <td class="text-end amount">{{ '{:,}'.format(grp.schedules | sum(attribute='mgmt_fee_amount')) }}</td>
-            <td class="text-end amount">{{ '{:,}'.format(grp.schedules | sum(attribute='parking_amount')) }}</td>
-            <td class="text-end amount">{{ '{:,}'.format(grp.schedules | sum(attribute='tax_amount')) }}</td>
-            <td class="text-end amount" style="color:var(--accent-blue)">¥{{ '{:,}'.format(grp.total) }}</td>
-            <td colspan="3"></td>
-          </tr>
-        </tfoot>
-      </table>
+
+  {# ── 明細テーブル（折りたたみ） ── #}
+  <div class="collapse {{ 'show' if has_unpaid else '' }}" id="{{ collapse_id }}">
+    <div class="card-body p-0">
+      <div class="table-responsive" style="border:none;border-radius:0">
+        <table class="table table-hover mb-0" style="font-size:0.875rem">
+          <thead>
+            <tr>
+              <th style="padding-left:1rem">物件名</th>
+              <th class="text-end">賃料（税抜）</th>
+              <th class="text-end">管理費</th>
+              <th class="text-end">駐車場代</th>
+              <th class="text-end">消費税</th>
+              <th class="text-end">合計（税込）</th>
+              <th>状態</th>
+              <th>支払日</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in grp.schedules %}
+            <tr>
+              <td style="padding-left:1rem">
+                <a href="{{ url_for('properties.detail', id=s.property_id) }}" class="prop-link">
+                  {{ s.contract.property.name }}
+                </a>
+                {% if s.contract.property.property_no %}
+                  <span class="badge-no ms-1">{{ s.contract.property.property_no }}</span>
+                {% endif %}
+              </td>
+              <td class="text-end amount">{{ '{:,}'.format(s.rent_amount) }}</td>
+              <td class="text-end amount">{{ '{:,}'.format(s.mgmt_fee_amount) if s.mgmt_fee_amount else '—' }}</td>
+              <td class="text-end amount">{{ '{:,}'.format(s.parking_amount) if s.parking_amount else '—' }}</td>
+              <td class="text-end amount">{{ '{:,}'.format(s.tax_amount) }}</td>
+              <td class="text-end amount fw-bold">¥{{ '{:,}'.format(s.total_amount) }}</td>
+              <td>
+                {% if s.is_paid %}
+                  <span class="badge-paid"><i class="bi bi-check-lg me-1"></i>支払済</span>
+                {% else %}
+                  <span class="badge-unpaid">未払</span>
+                {% endif %}
+              </td>
+              <td style="font-size:0.8rem;color:var(--text-secondary)">{{ s.paid_date or '—' }}</td>
+              <td class="text-end">
+                {% if s.is_paid %}
+                <form method="post" action="{{ url_for('payments.mark_unpaid', id=s.id) }}" class="d-inline">
+                  <button type="submit" class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem">未払に戻す</button>
+                </form>
+                {% else %}
+                <form method="post" action="{{ url_for('payments.mark_paid', id=s.id) }}" class="d-inline">
+                  <button type="submit" class="btn btn-sm" style="background-color:rgba(63,185,80,0.12);color:var(--accent-green);border:1px solid rgba(63,185,80,0.3);font-size:0.75rem">
+                    支払済にする
+                  </button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="background-color:var(--bg-secondary);font-weight:700">
+              <td style="padding-left:1rem;color:var(--text-primary)">小計</td>
+              <td class="text-end amount">{{ '{:,}'.format(grp.schedules | sum(attribute='rent_amount')) }}</td>
+              <td class="text-end amount">{{ '{:,}'.format(grp.schedules | sum(attribute='mgmt_fee_amount')) }}</td>
+              <td class="text-end amount">{{ '{:,}'.format(grp.schedules | sum(attribute='parking_amount')) }}</td>
+              <td class="text-end amount">{{ '{:,}'.format(grp.schedules | sum(attribute='tax_amount')) }}</td>
+              <td class="text-end amount" style="color:var(--accent-blue)">¥{{ '{:,}'.format(grp.total) }}</td>
+              <td colspan="3"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
   </div>
+
 </div>
 {% endfor %}
 
-<!-- 全件合計フッター -->
-<div style="text-align:right;padding:0.5rem 0.75rem;font-weight:700;font-size:0.9rem;color:var(--text-secondary)">
+<!-- 月次合計 -->
+<div style="text-align:right;padding:0.4rem 0.5rem;font-size:0.85rem;color:var(--text-secondary)">
   月次合計:
-  <span class="amount ms-2" style="color:var(--accent-blue);font-size:1.1rem">¥{{ '{:,}'.format(total_amount) }}</span>
+  <span class="amount ms-2 fw-bold" style="color:var(--accent-blue);font-size:1.05rem">¥{{ '{:,}'.format(total_amount) }}</span>
 </div>
 
 {% endif %}
@@ -183,12 +215,12 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="background:var(--bg-secondary);border:1px solid var(--border-color)">
       <div class="modal-header" style="border-color:var(--border-color)">
-        <h5 class="modal-title" id="combinedModalLabel">
+        <h5 class="modal-title" id="combinedModalLabel" style="color:var(--text-primary)">
           <i class="bi bi-file-zip me-2"></i>全銀・仕訳 一括出力
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <form id="combinedForm" method="get" action="{{ url_for('payments.export_combined') }}">
+      <form id="combinedForm" method="post" action="{{ url_for('payments.export_combined') }}">
         <input type="hidden" name="year" id="modalYear">
         <input type="hidden" name="month" id="modalMonth">
         <input type="hidden" name="payment_day" id="modalDay">
@@ -197,11 +229,13 @@
             <span id="modalGroupLabel"></span> の全銀ファイルと仕訳CSVをZIPでダウンロードします。
           </p>
           <div class="mb-3">
-            <label class="form-label fw-semibold">
+            <label class="form-label fw-semibold" style="color:var(--text-primary)">
               この支払を実行する日付は？ <span style="color:var(--accent-red)">*</span>
             </label>
             <input type="date" name="transfer_date" id="modalTransferDate" class="form-control" required>
-            <div class="form-text">全銀ファイルの振込日、および仕訳CSVの伝票日付に使用します。</div>
+            <div class="form-text">全銀ファイルの振込日および仕訳CSVの伝票日付に使用。<br>
+              <strong style="color:var(--accent-green)">出力後、対象の未払スケジュールは自動で支払済になります。</strong>
+            </div>
           </div>
           <div class="alert alert-info p-2" style="font-size:0.8rem">
             <i class="bi bi-info-circle me-1"></i>
@@ -225,19 +259,34 @@
 // 全銀・仕訳出力ボタン → モーダルに値をセット
 document.querySelectorAll('.btn-combined-export').forEach(function(btn) {
   btn.addEventListener('click', function() {
-    var day   = this.dataset.day;
-    var year  = this.dataset.year;
-    var month = this.dataset.month;
+    var day         = this.dataset.day;
+    var year        = this.dataset.year;
+    var month       = this.dataset.month;
     var defaultDate = this.dataset.defaultDate;
 
-    document.getElementById('modalYear').value  = year;
-    document.getElementById('modalMonth').value = month;
-    document.getElementById('modalDay').value   = day;
+    document.getElementById('modalYear').value        = year;
+    document.getElementById('modalMonth').value       = month;
+    document.getElementById('modalDay').value         = day;
     document.getElementById('modalTransferDate').value = defaultDate;
 
-    var y = year, m = String(month).padStart(2, '0');
+    var m = String(month).padStart(2, '0');
     document.getElementById('modalGroupLabel').textContent =
-      y + '年' + m + '月 / 毎月' + day + '日払い';
+      year + '年' + m + '月 / 毎月 ' + day + '日払い';
+  });
+});
+
+// Bootstrap collapse のアイコン連動
+document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function(header) {
+  var target = document.querySelector(header.dataset.bsTarget);
+  if (!target) return;
+  var icon = header.querySelector('.toggle-icon');
+  if (!icon) return;
+
+  target.addEventListener('show.bs.collapse', function() {
+    icon.classList.replace('bi-chevron-right', 'bi-chevron-down');
+  });
+  target.addEventListener('hide.bs.collapse', function() {
+    icon.classList.replace('bi-chevron-down', 'bi-chevron-right');
   });
 });
 </script>

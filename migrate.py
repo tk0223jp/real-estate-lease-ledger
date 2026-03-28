@@ -132,6 +132,13 @@ def migrate():
     _add_column_if_missing(cur, "contracts", "parking_credit_account_code TEXT", con_cols)
     _add_column_if_missing(cur, "contracts", "parking_credit_account_name TEXT NOT NULL DEFAULT '普通預金'", con_cols)
 
+    # ----------------------------------------------------------------
+    # payment_schedules に journaled_at 追加（フェーズ4: 計上管理）
+    # ----------------------------------------------------------------
+    cur.execute("PRAGMA table_info(payment_schedules)")
+    sched_cols = {row[1] for row in cur.fetchall()}
+    _add_column_if_missing(cur, "payment_schedules", "journaled_at TEXT", sched_cols)
+
     conn.commit()
     conn.close()
     print("\nマイグレーション完了！")

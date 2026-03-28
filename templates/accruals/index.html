@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}計上管理 — 賃貸借管理台帳{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-journal-check me-2"></i>計上管理</h2>
+</div>
+
+<p style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1.5rem">
+  月別の仕訳CSV出力状況を管理します。「仕訳CSV出力」を実行すると対象月のスケジュールが自動で計上済になります。
+</p>
+
+{% if not months %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-journal-x" style="font-size:2.5rem;color:var(--text-secondary)"></i>
+    <div class="mt-2 text-muted">支払スケジュールが存在しません</div>
+    <a href="{{ url_for('payments.index') }}" class="btn btn-primary btn-sm mt-3">
+      <i class="bi bi-calendar-check me-1"></i>支払管理へ
+    </a>
+  </div>
+</div>
+{% else %}
+
+<div class="table-responsive">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>対象年月</th>
+        <th class="text-end">件数</th>
+        <th class="text-end">計上済</th>
+        <th class="text-end">未計上</th>
+        <th class="text-end">合計金額（税込）</th>
+        <th>計上状況</th>
+        <th>最終計上日時</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in months %}
+      <tr>
+        <td>
+          <span style="font-weight:600;color:var(--text-primary)">
+            {{ m.year }}年{{ '%02d'%m.month }}月
+          </span>
+        </td>
+        <td class="text-end">{{ m.total }}件</td>
+        <td class="text-end" style="color:var(--accent-green)">
+          {{ m.journaled }}件
+        </td>
+        <td class="text-end" style="color:{{ 'var(--accent-red)' if m.unjournaled else 'var(--text-secondary)' }}">
+          {{ m.unjournaled }}件
+        </td>
+        <td class="text-end amount">¥{{ '{:,}'.format(m.total_amount) }}</td>
+        <td>
+          {% if m.all_journaled %}
+            <span class="badge-paid"><i class="bi bi-check-lg me-1"></i>全件計上済</span>
+          {% elif m.journaled > 0 %}
+            <span class="badge-warn">一部計上済</span>
+          {% else %}
+            <span class="badge-unpaid">未計上</span>
+          {% endif %}
+        </td>
+        <td style="font-size:0.78rem;color:var(--text-secondary)">
+          {{ m.last_journaled or '—' }}
+        </td>
+        <td class="text-end" style="white-space:nowrap">
+          <a href="{{ url_for('accruals.export', year=m.year, month=m.month) }}"
+             class="btn btn-sm me-1"
+             style="background-color:rgba(88,166,255,0.1);color:var(--accent-blue);border:1px solid rgba(88,166,255,0.25)">
+            <i class="bi bi-filetype-csv me-1"></i>仕訳CSV出力
+          </a>
+          {% if m.journaled > 0 %}
+          <form method="post" action="{{ url_for('accruals.reset') }}" class="d-inline"
+                onsubmit="return confirm('{{ m.year }}年{{ m.month }}月の計上済フラグをリセットしますか？')">
+            <input type="hidden" name="year" value="{{ m.year }}">
+            <input type="hidden" name="month" value="{{ m.month }}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary" title="計上フラグをリセット">
+              <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endif %}
+{% endblock %}

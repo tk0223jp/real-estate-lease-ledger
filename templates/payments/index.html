@@ -81,11 +81,11 @@
   <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2"
        style="cursor:pointer;user-select:none"
        data-bs-toggle="collapse" data-bs-target="#{{ collapse_id }}"
-       aria-expanded="{{ 'true' if has_unpaid else 'false' }}"
+       aria-expanded="false"
        aria-controls="{{ collapse_id }}">
     <div class="d-flex align-items-center gap-3 flex-wrap">
       {# 開閉アイコン #}
-      <i class="bi bi-chevron-{{ 'down' if has_unpaid else 'right' }} toggle-icon"
+      <i class="bi bi-chevron-right toggle-icon"
          style="font-size:0.8rem;color:var(--text-secondary);transition:transform 0.2s"></i>
 
       <span style="font-weight:700;font-size:0.95rem;color:var(--text-primary)">
@@ -126,7 +126,7 @@
   </div>
 
   {# ── 明細テーブル（折りたたみ） ── #}
-  <div class="collapse {{ 'show' if has_unpaid else '' }}" id="{{ collapse_id }}">
+  <div class="collapse" id="{{ collapse_id }}">
     <div class="card-body p-0">
       <div class="table-responsive" style="border:none;border-radius:0">
         <table class="table table-hover mb-0" style="font-size:0.875rem">

@@ -210,6 +210,14 @@ def export_journal():
         return redirect(url_for("payments.index", year=year, month=month))
 
     csv_text = generate_journal_csv(schedules)
+
+    # 計上済フラグを更新
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for s in schedules:
+        s.journaled_at = now_str
+        s.updated_at = now_str
+    db.session.commit()
+
     filename = f"journal_{year}{month:02d}.csv"
     return Response(
         csv_text.encode("utf-8-sig"),
@@ -284,14 +292,17 @@ def export_combined():
         )
     zip_buffer.seek(0)
 
-    # 全銀ファイルに含めた未払スケジュールを支払済に更新
+    # 全銀ファイルに含めた未払スケジュールを支払済に更新、全件を計上済に更新
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if unpaid:
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         for s in unpaid:
             s.is_paid = 1
             s.paid_date = transfer_date_str
             s.updated_at = now_str
-        db.session.commit()
+    for s in all_schedules:
+        s.journaled_at = now_str
+        s.updated_at = now_str
+    db.session.commit()
 
     filename = f"payment_{year}{month:02d}_{payment_day:02d}d.zip"
     return Response(

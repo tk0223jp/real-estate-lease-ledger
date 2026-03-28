@@ -146,10 +146,25 @@ class Contract(db.Model):
     mgmt_fee_journal_pattern_id = db.Column(db.Integer, db.ForeignKey("journal_patterns.id"), nullable=True)
     parking_journal_pattern_id = db.Column(db.Integer, db.ForeignKey("journal_patterns.id"), nullable=True)
 
+    # 費目別仕訳科目
+    rent_debit_account_code = db.Column(db.Text)
+    rent_debit_account_name = db.Column(db.Text, nullable=False, default="地代家賃")
+    rent_credit_account_code = db.Column(db.Text)
+    rent_credit_account_name = db.Column(db.Text, nullable=False, default="普通預金")
+    mgmt_debit_account_code = db.Column(db.Text)
+    mgmt_debit_account_name = db.Column(db.Text, nullable=False, default="地代家賃")
+    mgmt_credit_account_code = db.Column(db.Text)
+    mgmt_credit_account_name = db.Column(db.Text, nullable=False, default="普通預金")
+    parking_debit_account_code = db.Column(db.Text)
+    parking_debit_account_name = db.Column(db.Text, nullable=False, default="駐車場代")
+    parking_credit_account_code = db.Column(db.Text)
+    parking_credit_account_name = db.Column(db.Text, nullable=False, default="普通預金")
+
     # 解約情報
-    terminated_at = db.Column(db.Text)       # 解約日（NULL = アクティブ）
-    vacated_at = db.Column(db.Text)           # 退去日
-    termination_reason = db.Column(db.Text)  # 解約理由
+    terminated_at = db.Column(db.Text)            # 解約日（NULL = アクティブ）
+    vacated_at = db.Column(db.Text)               # 旧・退去日（互換性のため残置）
+    deposit_returned_at = db.Column(db.Text)      # 敷金返金日
+    termination_reason = db.Column(db.Text)       # 解約理由
 
     notes = db.Column(db.Text)
     is_deleted = db.Column(db.Integer, nullable=False, default=0)
@@ -180,6 +195,16 @@ class Contract(db.Model):
     @property
     def is_terminated(self):
         return self.terminated_at is not None
+
+    @property
+    def has_active_deposit(self):
+        """敷金残高が存在するか（返金日が未設定 or 今日以降）"""
+        if self.security_deposit <= 0:
+            return False
+        if not self.deposit_returned_at:
+            return True
+        from datetime import date
+        return self.deposit_returned_at >= date.today().isoformat()
 
     @property
     def rent_tax(self):

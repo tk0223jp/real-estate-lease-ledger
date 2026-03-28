@@ -125,118 +125,143 @@
   <div class="form-section">
     <div class="form-section-title"><i class="bi bi-currency-yen me-1"></i>月額費用</div>
     <div class="row g-3">
-      <div class="col-md-5">
-        <label class="form-label">賃料（税抜）</label>
-        <div class="input-group">
-          <span class="input-group-text">¥</span>
-          <input type="number" name="rent_amount" class="form-control" value="{{ form.get('rent_amount',0) }}" min="0">
+
+      {# 賃料 #}
+      <div class="col-12">
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:0.4rem">賃料</div>
+        <div class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label">金額（税抜）</label>
+            <div class="input-group">
+              <span class="input-group-text">¥</span>
+              <input type="number" name="rent_amount" class="form-control" value="{{ form.get('rent_amount',0) }}" min="0">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">課税区分</label>
+            <select name="rent_tax_type" class="form-select">
+              {% for t in tax_types %}
+              <option value="{{ t }}" {% if form.get('rent_tax_type','非課税') == t %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">借方コード</label>
+            <input type="text" name="rent_debit_account_code" class="form-control" value="{{ form.get('rent_debit_account_code','') }}" placeholder="600">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">借方科目名</label>
+            <input type="text" name="rent_debit_account_name" class="form-control" value="{{ form.get('rent_debit_account_name','地代家賃') }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">貸方コード</label>
+            <input type="text" name="rent_credit_account_code" class="form-control" value="{{ form.get('rent_credit_account_code','') }}" placeholder="110">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">貸方科目名</label>
+            <input type="text" name="rent_credit_account_name" class="form-control" value="{{ form.get('rent_credit_account_name','普通預金') }}">
+          </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <label class="form-label">課税区分</label>
-        <select name="rent_tax_type" class="form-select">
-          {% for t in tax_types %}
-          <option value="{{ t }}" {% if form.get('rent_tax_type','非課税') == t %}selected{% endif %}>{{ t }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">仕訳パターン</label>
-        <select name="rent_journal_pattern_id" class="form-select journal-pattern-select"
-                data-target="rent">
-          <option value="">── 直接入力 ──</option>
-          {% for p in journal_patterns %}
-          <option value="{{ p.id }}"
-                  data-debit-code="{{ p.debit_account_code or '' }}"
-                  data-debit-name="{{ p.debit_account_name }}"
-                  data-credit-code="{{ p.credit_account_code or '' }}"
-                  data-credit-name="{{ p.credit_account_name }}"
-                  data-dept="{{ p.dept_code or '' }}"
-                  {% if form.get('rent_journal_pattern_id')|string == p.id|string %}selected{% endif %}>
-            {{ p.name }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-5">
-        <label class="form-label">管理費（税抜）</label>
-        <div class="input-group">
-          <span class="input-group-text">¥</span>
-          <input type="number" name="mgmt_fee_amount" class="form-control" value="{{ form.get('mgmt_fee_amount',0) }}" min="0">
+
+      {# 管理費 #}
+      <div class="col-12">
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:0.4rem">管理費</div>
+        <div class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label">金額（税抜）</label>
+            <div class="input-group">
+              <span class="input-group-text">¥</span>
+              <input type="number" name="mgmt_fee_amount" class="form-control" value="{{ form.get('mgmt_fee_amount',0) }}" min="0">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">課税区分</label>
+            <select name="mgmt_fee_tax_type" class="form-select">
+              {% for t in tax_types %}
+              <option value="{{ t }}" {% if form.get('mgmt_fee_tax_type','課税') == t %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">借方コード</label>
+            <input type="text" name="mgmt_debit_account_code" class="form-control" value="{{ form.get('mgmt_debit_account_code','') }}" placeholder="600">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">借方科目名</label>
+            <input type="text" name="mgmt_debit_account_name" class="form-control" value="{{ form.get('mgmt_debit_account_name','地代家賃') }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">貸方コード</label>
+            <input type="text" name="mgmt_credit_account_code" class="form-control" value="{{ form.get('mgmt_credit_account_code','') }}" placeholder="110">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">貸方科目名</label>
+            <input type="text" name="mgmt_credit_account_name" class="form-control" value="{{ form.get('mgmt_credit_account_name','普通預金') }}">
+          </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <label class="form-label">課税区分</label>
-        <select name="mgmt_fee_tax_type" class="form-select">
-          {% for t in tax_types %}
-          <option value="{{ t }}" {% if form.get('mgmt_fee_tax_type','課税') == t %}selected{% endif %}>{{ t }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">仕訳パターン</label>
-        <select name="mgmt_fee_journal_pattern_id" class="form-select journal-pattern-select"
-                data-target="mgmt">
-          <option value="">── 直接入力 ──</option>
-          {% for p in journal_patterns %}
-          <option value="{{ p.id }}"
-                  data-debit-code="{{ p.debit_account_code or '' }}"
-                  data-debit-name="{{ p.debit_account_name }}"
-                  data-credit-code="{{ p.credit_account_code or '' }}"
-                  data-credit-name="{{ p.credit_account_name }}"
-                  data-dept="{{ p.dept_code or '' }}"
-                  {% if form.get('mgmt_fee_journal_pattern_id')|string == p.id|string %}selected{% endif %}>
-            {{ p.name }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-5">
-        <label class="form-label">駐車場代（税抜）</label>
-        <div class="input-group">
-          <span class="input-group-text">¥</span>
-          <input type="number" name="parking_amount" class="form-control" value="{{ form.get('parking_amount',0) }}" min="0">
+
+      {# 駐車場代 #}
+      <div class="col-12">
+        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:0.4rem">駐車場代</div>
+        <div class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label">金額（税抜）</label>
+            <div class="input-group">
+              <span class="input-group-text">¥</span>
+              <input type="number" name="parking_amount" class="form-control" value="{{ form.get('parking_amount',0) }}" min="0">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">課税区分</label>
+            <select name="parking_tax_type" class="form-select">
+              {% for t in tax_types %}
+              <option value="{{ t }}" {% if form.get('parking_tax_type','非課税') == t %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">借方コード</label>
+            <input type="text" name="parking_debit_account_code" class="form-control" value="{{ form.get('parking_debit_account_code','') }}" placeholder="630">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">借方科目名</label>
+            <input type="text" name="parking_debit_account_name" class="form-control" value="{{ form.get('parking_debit_account_name','駐車場代') }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">貸方コード</label>
+            <input type="text" name="parking_credit_account_code" class="form-control" value="{{ form.get('parking_credit_account_code','') }}" placeholder="110">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">貸方科目名</label>
+            <input type="text" name="parking_credit_account_name" class="form-control" value="{{ form.get('parking_credit_account_name','普通預金') }}">
+          </div>
         </div>
       </div>
+
+      {# 部門コード・敷金・礼金 #}
+      <div class="col-md-2">
+        <label class="form-label">部門コード</label>
+        <input type="text" name="dept_code" class="form-control" value="{{ form.get('dept_code','') }}" placeholder="01">
+      </div>
       <div class="col-md-3">
-        <label class="form-label">課税区分</label>
-        <select name="parking_tax_type" class="form-select">
-          {% for t in tax_types %}
-          <option value="{{ t }}" {% if form.get('parking_tax_type','非課税') == t %}selected{% endif %}>{{ t }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">仕訳パターン</label>
-        <select name="parking_journal_pattern_id" class="form-select journal-pattern-select"
-                data-target="parking">
-          <option value="">── 直接入力 ──</option>
-          {% for p in journal_patterns %}
-          <option value="{{ p.id }}"
-                  data-debit-code="{{ p.debit_account_code or '' }}"
-                  data-debit-name="{{ p.debit_account_name }}"
-                  data-credit-code="{{ p.credit_account_code or '' }}"
-                  data-credit-name="{{ p.credit_account_name }}"
-                  data-dept="{{ p.dept_code or '' }}"
-                  {% if form.get('parking_journal_pattern_id')|string == p.id|string %}selected{% endif %}>
-            {{ p.name }}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-5">
         <label class="form-label">保証金・敷金</label>
         <div class="input-group">
           <span class="input-group-text">¥</span>
           <input type="number" name="security_deposit" class="form-control" value="{{ form.get('security_deposit',0) }}" min="0">
         </div>
       </div>
-      <div class="col-md-5">
+      <div class="col-md-3">
         <label class="form-label">礼金</label>
         <div class="input-group">
           <span class="input-group-text">¥</span>
           <input type="number" name="key_money" class="form-control" value="{{ form.get('key_money',0) }}" min="0">
         </div>
+      </div>
+      <div class="col-12">
+        <label class="form-label">契約備考</label>
+        <textarea name="contract_notes" class="form-control" rows="2" placeholder="仕訳摘要や補足事項など">{{ form.get('contract_notes','') }}</textarea>
       </div>
     </div>
   </div>
@@ -285,37 +310,6 @@
     </div>
   </div>
 
-  {# ── 5. 会計設定 ── #}
-  <div class="form-section">
-    <div class="form-section-title"><i class="bi bi-journal-text me-1"></i>会計設定（仕訳CSV用）</div>
-    <div class="row g-3">
-      <div class="col-md-2">
-        <label class="form-label">借方科目コード</label>
-        <input type="text" name="debit_account_code" class="form-control" value="{{ form.get('debit_account_code','') }}" placeholder="600">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">借方科目名</label>
-        <input type="text" name="debit_account_name" class="form-control" value="{{ form.get('debit_account_name','地代家賃') }}">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">貸方科目コード</label>
-        <input type="text" name="credit_account_code" class="form-control" value="{{ form.get('credit_account_code','') }}" placeholder="110">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">貸方科目名</label>
-        <input type="text" name="credit_account_name" class="form-control" value="{{ form.get('credit_account_name','普通預金') }}">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">部門コード</label>
-        <input type="text" name="dept_code" class="form-control" value="{{ form.get('dept_code','') }}" placeholder="01">
-      </div>
-      <div class="col-12">
-        <label class="form-label">契約備考</label>
-        <textarea name="contract_notes" class="form-control" rows="2" placeholder="仕訳摘要や補足事項など">{{ form.get('contract_notes','') }}</textarea>
-      </div>
-    </div>
-  </div>
-
   <div class="d-flex gap-2 mt-1">
     <button type="submit" class="btn btn-primary">
       <i class="bi bi-check-lg me-1"></i>{{ "更新する" if prop else "登録する" }}
@@ -327,25 +321,6 @@
 
 {% block scripts %}
 <script>
-// ── 仕訳パターン選択時に借方/貸方科目を自動補完 ──
-// 最後に選択されたパターンで共通フィールドを上書きする
-document.querySelectorAll('.journal-pattern-select').forEach(function(sel) {
-  sel.addEventListener('change', function() {
-    var opt = this.options[this.selectedIndex];
-    if (!opt.value) return;
-    var form = document.getElementById('propertyForm');
-    var set = function(name, val) {
-      var el = form.querySelector('[name="' + name + '"]');
-      if (el) el.value = val;
-    };
-    set('debit_account_code',  opt.dataset.debitCode);
-    set('debit_account_name',  opt.dataset.debitName);
-    set('credit_account_code', opt.dataset.creditCode);
-    set('credit_account_name', opt.dataset.creditName);
-    if (opt.dataset.dept) set('dept_code', opt.dataset.dept);
-  });
-});
-
 // ── AI契約書読み取り ──
 document.getElementById('extractBtn').addEventListener('click', function() {
   var fileInput = document.getElementById('contractFile');

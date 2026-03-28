@@ -45,13 +45,22 @@ def _apply_contract(c, form):
     c.account_number = form.get("account_number") or None
     c.account_holder = form.get("account_holder") or None
     c.zengin_sender_name = form.get("zengin_sender_name") or None
-    c.debit_account_code = form.get("debit_account_code") or None
-    c.debit_account_name = form.get("debit_account_name") or "地代家賃"
-    c.credit_account_code = form.get("credit_account_code") or None
-    c.credit_account_name = form.get("credit_account_name") or "普通預金"
     c.dept_code = form.get("dept_code") or None
     c.notes = form.get("contract_notes") or None
-    # 仕訳パターンFK（費目ごと）
+    # 費目別仕訳科目
+    c.rent_debit_account_code    = form.get("rent_debit_account_code") or None
+    c.rent_debit_account_name    = form.get("rent_debit_account_name") or "地代家賃"
+    c.rent_credit_account_code   = form.get("rent_credit_account_code") or None
+    c.rent_credit_account_name   = form.get("rent_credit_account_name") or "普通預金"
+    c.mgmt_debit_account_code    = form.get("mgmt_debit_account_code") or None
+    c.mgmt_debit_account_name    = form.get("mgmt_debit_account_name") or "地代家賃"
+    c.mgmt_credit_account_code   = form.get("mgmt_credit_account_code") or None
+    c.mgmt_credit_account_name   = form.get("mgmt_credit_account_name") or "普通預金"
+    c.parking_debit_account_code  = form.get("parking_debit_account_code") or None
+    c.parking_debit_account_name  = form.get("parking_debit_account_name") or "駐車場代"
+    c.parking_credit_account_code = form.get("parking_credit_account_code") or None
+    c.parking_credit_account_name = form.get("parking_credit_account_name") or "普通預金"
+    # 仕訳パターンFK（オーバーライド用）
     def _pat_id(key):
         v = form.get(key)
         return int(v) if v and v.isdigit() else None
@@ -240,12 +249,20 @@ def edit(id):
             "account_number": contract.account_number or "",
             "account_holder": contract.account_holder or "",
             "zengin_sender_name": contract.zengin_sender_name or "",
-            "debit_account_code": contract.debit_account_code or "",
-            "debit_account_name": contract.debit_account_name or "地代家賃",
-            "credit_account_code": contract.credit_account_code or "",
-            "credit_account_name": contract.credit_account_name or "普通預金",
             "dept_code": contract.dept_code or "",
             "contract_notes": contract.notes or "",
+            "rent_debit_account_code":    contract.rent_debit_account_code or "",
+            "rent_debit_account_name":    contract.rent_debit_account_name or "地代家賃",
+            "rent_credit_account_code":   contract.rent_credit_account_code or "",
+            "rent_credit_account_name":   contract.rent_credit_account_name or "普通預金",
+            "mgmt_debit_account_code":    contract.mgmt_debit_account_code or "",
+            "mgmt_debit_account_name":    contract.mgmt_debit_account_name or "地代家賃",
+            "mgmt_credit_account_code":   contract.mgmt_credit_account_code or "",
+            "mgmt_credit_account_name":   contract.mgmt_credit_account_name or "普通預金",
+            "parking_debit_account_code":  contract.parking_debit_account_code or "",
+            "parking_debit_account_name":  contract.parking_debit_account_name or "駐車場代",
+            "parking_credit_account_code": contract.parking_credit_account_code or "",
+            "parking_credit_account_name": contract.parking_credit_account_name or "普通預金",
             "rent_journal_pattern_id": contract.rent_journal_pattern_id or "",
             "mgmt_fee_journal_pattern_id": contract.mgmt_fee_journal_pattern_id or "",
             "parking_journal_pattern_id": contract.parking_journal_pattern_id or "",
@@ -257,8 +274,12 @@ def edit(id):
             "parking_tax_type": "非課税",
             "account_type": "普通",
             "payment_day": 25,
-            "debit_account_name": "地代家賃",
-            "credit_account_name": "普通預金",
+            "rent_debit_account_name":    "地代家賃",
+            "rent_credit_account_name":   "普通預金",
+            "mgmt_debit_account_name":    "地代家賃",
+            "mgmt_credit_account_name":   "普通預金",
+            "parking_debit_account_name":  "駐車場代",
+            "parking_credit_account_name": "普通預金",
         })
 
     return render_template("properties/form.html",
@@ -283,7 +304,7 @@ def terminate(id):
             return render_template("properties/terminate.html", prop=prop, contract=contract)
 
         contract.terminated_at = terminated_at
-        contract.vacated_at = request.form.get("vacated_at") or None
+        contract.deposit_returned_at = request.form.get("deposit_returned_at") or None
         contract.termination_reason = request.form.get("termination_reason") or None
         contract.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         db.session.commit()

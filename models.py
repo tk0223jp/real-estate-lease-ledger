@@ -261,6 +261,9 @@ class PaymentSchedule(db.Model):
     is_paid = db.Column(db.Integer, nullable=False, default=0)
     paid_date = db.Column(db.Text)
 
+    # 計上状態
+    journaled_at = db.Column(db.Text)  # 仕訳CSV出力日時（NULL=未計上）
+
     notes = db.Column(db.Text)
     created_at = db.Column(db.Text, nullable=False,
                            default=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))

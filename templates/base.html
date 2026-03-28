@@ -485,9 +485,12 @@
         <i class="bi bi-plus-circle"></i><span>新規登録</span>
       </a>
 
-      <div class="nav-section-label mt-2">支払管理</div>
+      <div class="nav-section-label mt-2">支払・計上管理</div>
       <a href="{{ url_for('payments.index') }}" class="{% if request.blueprint == 'payments' %}active{% endif %}">
         <i class="bi bi-calendar-check"></i><span>月次支払</span>
+      </a>
+      <a href="{{ url_for('accruals.index') }}" class="{% if request.blueprint == 'accruals' %}active{% endif %}">
+        <i class="bi bi-journal-check"></i><span>計上管理</span>
       </a>
 
       <div class="nav-section-label mt-2">マスタ</div>

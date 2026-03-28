@@ -16,12 +16,14 @@ def create_app():
     from routes.payments import bp as payments_bp
     from routes.companies import bp as companies_bp
     from routes.journal_patterns import bp as journal_patterns_bp
+    from routes.accruals import bp as accruals_bp
 
     app.register_blueprint(properties_bp)
     app.register_blueprint(contracts_bp)
     app.register_blueprint(payments_bp)
     app.register_blueprint(companies_bp)
     app.register_blueprint(journal_patterns_bp)
+    app.register_blueprint(accruals_bp)
 
     @app.context_processor
     def inject_company_context():

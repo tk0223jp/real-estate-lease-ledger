@@ -96,9 +96,13 @@
             <a href="{{ url_for('properties.detail', id=prop.id) }}" class="btn btn-sm btn-outline-secondary me-1" title="詳細">
               <i class="bi bi-eye"></i>
             </a>
-            <a href="{{ url_for('properties.edit', id=prop.id) }}" class="btn btn-sm btn-outline-secondary" title="編集">
-              <i class="bi bi-pencil"></i>
+            {% if contract %}
+            <a href="{{ url_for('properties.terminate', id=prop.id) }}"
+               class="btn btn-sm btn-outline-danger" title="解約"
+               onclick="return confirm('「{{ prop.name }}」の解約処理を行いますか？')">
+              <i class="bi bi-door-open"></i>
             </a>
+            {% endif %}
           </td>
         </tr>
       {% endfor %}

@@ -90,8 +90,16 @@ def migrate():
 
     # 解約フィールド
     _add_column_if_missing(cur, "contracts", "terminated_at TEXT", con_cols)
-    _add_column_if_missing(cur, "contracts", "vacated_at TEXT", con_cols)
+    _add_column_if_missing(cur, "contracts", "vacated_at TEXT", con_cols)          # 旧列（互換性のため残置）
+    _add_column_if_missing(cur, "contracts", "deposit_returned_at TEXT", con_cols) # 敷金返金日
     _add_column_if_missing(cur, "contracts", "termination_reason TEXT", con_cols)
+
+    # vacated_at → deposit_returned_at へデータ移行（未移行分のみ）
+    cur.execute("""
+        UPDATE contracts
+        SET deposit_returned_at = vacated_at
+        WHERE vacated_at IS NOT NULL AND deposit_returned_at IS NULL
+    """)
 
     # 仕訳パターンFK（費目ごと）
     _add_column_if_missing(
@@ -109,6 +117,20 @@ def migrate():
         "parking_journal_pattern_id INTEGER REFERENCES journal_patterns(id)",
         con_cols
     )
+
+    # 費目別仕訳科目（フェーズ3）
+    _add_column_if_missing(cur, "contracts", "rent_debit_account_code TEXT", con_cols)
+    _add_column_if_missing(cur, "contracts", "rent_debit_account_name TEXT NOT NULL DEFAULT '地代家賃'", con_cols)
+    _add_column_if_missing(cur, "contracts", "rent_credit_account_code TEXT", con_cols)
+    _add_column_if_missing(cur, "contracts", "rent_credit_account_name TEXT NOT NULL DEFAULT '普通預金'", con_cols)
+    _add_column_if_missing(cur, "contracts", "mgmt_debit_account_code TEXT", con_cols)
+    _add_column_if_missing(cur, "contracts", "mgmt_debit_account_name TEXT NOT NULL DEFAULT '地代家賃'", con_cols)
+    _add_column_if_missing(cur, "contracts", "mgmt_credit_account_code TEXT", con_cols)
+    _add_column_if_missing(cur, "contracts", "mgmt_credit_account_name TEXT NOT NULL DEFAULT '普通預金'", con_cols)
+    _add_column_if_missing(cur, "contracts", "parking_debit_account_code TEXT", con_cols)
+    _add_column_if_missing(cur, "contracts", "parking_debit_account_name TEXT NOT NULL DEFAULT '駐車場代'", con_cols)
+    _add_column_if_missing(cur, "contracts", "parking_credit_account_code TEXT", con_cols)
+    _add_column_if_missing(cur, "contracts", "parking_credit_account_name TEXT NOT NULL DEFAULT '普通預金'", con_cols)
 
     conn.commit()
     conn.close()

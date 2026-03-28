@@ -59,25 +59,17 @@ def _make_row(date_str, debit_code, debit_name, amount, tax_type, tax_amount,
     ]
 
 
-def _resolve_accounts(pattern, contract):
-    """仕訳パターンまたは契約マスタから科目コード/名を返す"""
+def _resolve_accounts(pattern, debit_code, debit_name, credit_code, credit_name, dept):
+    """仕訳パターン（オーバーライド）または費目別科目フィールドから科目コード/名を返す"""
     if pattern:
         return (
             pattern.debit_account_code,
             pattern.debit_account_name,
             pattern.credit_account_code,
             pattern.credit_account_name,
-            pattern.dept_code or (contract.dept_code if contract else ""),
+            pattern.dept_code or dept or "",
         )
-    if contract:
-        return (
-            contract.debit_account_code,
-            contract.debit_account_name,
-            contract.credit_account_code,
-            contract.credit_account_name,
-            contract.dept_code,
-        )
-    return ("", "地代家賃", "", "普通預金", "")
+    return (debit_code, debit_name, credit_code, credit_name, dept or "")
 
 
 def generate_journal_csv(schedules: list) -> str:
@@ -109,36 +101,59 @@ def generate_journal_csv(schedules: list) -> str:
         park_pat = (db.session.get(JournalPattern, contract.parking_journal_pattern_id)
                     if contract and contract.parking_journal_pattern_id else None)
 
+        dept = contract.dept_code if contract else ""
+
         # 賃料行
-        d_code, d_name, c_code, c_name, dept = _resolve_accounts(rent_pat, contract)
+        d_code, d_name, c_code, c_name, row_dept = _resolve_accounts(
+            rent_pat,
+            contract.rent_debit_account_code if contract else None,
+            contract.rent_debit_account_name if contract else "地代家賃",
+            contract.rent_credit_account_code if contract else None,
+            contract.rent_credit_account_name if contract else "普通預金",
+            dept,
+        )
         rent_tax = _tax(s.rent_amount, s.rent_tax_type)
         writer.writerow(_make_row(
             date_str, d_code, d_name,
             s.rent_amount, s.rent_tax_type, rent_tax,
             c_code, c_name,
-            base_summary + " 賃料", dept
+            base_summary + " 賃料", row_dept
         ))
 
         # 管理費行（金額>0のとき）
         if s.mgmt_fee_amount:
-            d_code, d_name, c_code, c_name, dept = _resolve_accounts(mgmt_pat, contract)
+            d_code, d_name, c_code, c_name, row_dept = _resolve_accounts(
+                mgmt_pat,
+                contract.mgmt_debit_account_code if contract else None,
+                contract.mgmt_debit_account_name if contract else "地代家賃",
+                contract.mgmt_credit_account_code if contract else None,
+                contract.mgmt_credit_account_name if contract else "普通預金",
+                dept,
+            )
             mgmt_tax = _tax(s.mgmt_fee_amount, s.mgmt_fee_tax_type)
             writer.writerow(_make_row(
                 date_str, d_code, d_name,
                 s.mgmt_fee_amount, s.mgmt_fee_tax_type, mgmt_tax,
                 c_code, c_name,
-                base_summary + " 管理費", dept
+                base_summary + " 管理費", row_dept
             ))
 
         # 駐車場代行（金額>0のとき）
         if s.parking_amount:
-            d_code, d_name, c_code, c_name, dept = _resolve_accounts(park_pat, contract)
+            d_code, d_name, c_code, c_name, row_dept = _resolve_accounts(
+                park_pat,
+                contract.parking_debit_account_code if contract else None,
+                contract.parking_debit_account_name if contract else "駐車場代",
+                contract.parking_credit_account_code if contract else None,
+                contract.parking_credit_account_name if contract else "普通預金",
+                dept,
+            )
             parking_tax = _tax(s.parking_amount, s.parking_tax_type)
             writer.writerow(_make_row(
                 date_str, d_code, d_name,
                 s.parking_amount, s.parking_tax_type, parking_tax,
                 c_code, c_name,
-                base_summary + " 駐車場代", dept
+                base_summary + " 駐車場代", row_dept
             ))
 
     return output.getvalue()
